@@ -183,14 +183,24 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     };
 
-    // 4. Switcher Button Click Listeners
-    switcherButtons.forEach(btn => {
-        btn.addEventListener('click', (e) => {
-            e.preventDefault();
-            const idx = parseInt(btn.getAttribute('data-index'), 10);
-            updateProjectDisplay(idx, true);
+    // 4. Switcher Button Click Listeners & Dynamic Generation
+    const numberedSwitcher = document.getElementById('project-numbered-switcher');
+    if (numberedSwitcher && projects.length > 0) {
+        numberedSwitcher.innerHTML = projects.map((p, idx) => 
+            `<button class="switcher-num-btn ${idx === 0 ? 'active' : ''}" data-index="${idx}">${p.number}</button>`
+        ).join('');
+    }
+
+    const refreshSwitcherListeners = () => {
+        document.querySelectorAll('.switcher-num-btn').forEach(btn => {
+            btn.addEventListener('click', (e) => {
+                e.preventDefault();
+                const idx = parseInt(btn.getAttribute('data-index'), 10);
+                updateProjectDisplay(idx, true);
+            });
         });
-    });
+    };
+    refreshSwitcherListeners();
 
     const prevBtns = document.querySelectorAll('#prev-project-btn-bottom, #project-prev-btn, .nav-arrow-btn[title="Previous Project"]');
     const nextBtns = document.querySelectorAll('#next-project-btn-bottom, #project-next-btn, .nav-arrow-btn[title="Next Project"]');
@@ -231,7 +241,7 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     }
 
-    // 5. Touch Swipe Navigation for Exhibition Stage with Strict Angle Detection (abs(deltaX) > 1.5 * abs(deltaY))
+    // 5. Touch Swipe Navigation for Exhibition Stage with Strict Angle Detection
     let touchStartX = 0;
     let touchStartY = 0;
     let touchEndX = 0;
@@ -253,7 +263,6 @@ document.addEventListener('DOMContentLoaded', () => {
                 const deltaX = touchEndX - touchStartX;
                 const deltaY = touchEndY - touchStartY;
                 
-                // Only treat as horizontal project swipe if horizontal distance is dominant (>40px AND > 1.4x vertical movement)
                 if (Math.abs(deltaX) > 40 && Math.abs(deltaX) > Math.abs(deltaY) * 1.4) {
                     if (deltaX < 0) {
                         updateProjectDisplay(currentProjectIndex + 1, false);
@@ -269,46 +278,26 @@ document.addEventListener('DOMContentLoaded', () => {
         updateProjectDisplay(0, false);
     }
 
-    // 6. Section Scroll Tracking & 3D Choreography
-    const navLinks = document.querySelectorAll('.nav-link');
-    const sections = document.querySelectorAll('section');
-    let lastSection = 'home';
-    let isThrottled = false;
+    // 6. Section Navigation State Tracker
+    const sections = document.querySelectorAll('section[id]');
+    const navLinks = document.querySelectorAll('.nav-link, .mobile-nav-link');
 
     const updateActiveNav = () => {
-        if (isThrottled) return;
-        isThrottled = true;
-        requestAnimationFrame(() => {
-            isThrottled = false;
+        const scrollY = window.lenis ? window.lenis.scroll : window.scrollY;
+        sections.forEach(sec => {
+            const top = sec.offsetTop - 200;
+            const height = sec.offsetHeight;
+            const id = sec.getAttribute('id');
+            if (scrollY >= top && scrollY < top + height) {
+                navLinks.forEach(link => {
+                    link.classList.toggle('active', link.getAttribute('data-section') === id);
+                });
+            }
         });
-
-        let current = 'home';
-        const scrollPosition = (window.lenis ? window.lenis.scroll : window.scrollY) + window.innerHeight * 0.35;
-
-        for (let i = 0; i < sections.length; i++) {
-            const section = sections[i];
-            const sectionTop = section.offsetTop;
-            const sectionHeight = section.offsetHeight;
-            if (scrollPosition >= sectionTop && scrollPosition < sectionTop + sectionHeight) {
-                current = section.getAttribute('id');
-                break;
-            }
-        }
-
-        if (current !== lastSection) {
-            lastSection = current;
-            navLinks.forEach(link => {
-                link.classList.toggle('active', link.getAttribute('data-section') === current);
-            });
-
-            if (window.studioScene && typeof window.studioScene.transitionToSection === 'function') {
-                window.studioScene.transitionToSection(current);
-            }
-        }
     };
 
-    if (lenis) {
-        lenis.on('scroll', updateActiveNav);
+    if (window.lenis) {
+        window.lenis.on('scroll', updateActiveNav);
     } else {
         window.addEventListener('scroll', updateActiveNav, { passive: true });
     }
@@ -349,169 +338,326 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     });
 
-    // 7. Studio Desk Lamp Toggle Control
+    // 7. Studio Desk Lamp Toggle Trigger
     const lampBtn = document.getElementById('toggle-lamp-btn');
     if (lampBtn) {
-        lampBtn.addEventListener('click', (e) => {
-            e.preventDefault();
+        lampBtn.addEventListener('click', () => {
             triggerHaptic('button');
             if (window.studioScene && typeof window.studioScene.toggleDeskLamp === 'function') {
-                const isOn = window.studioScene.toggleDeskLamp();
-                lampBtn.style.color = isOn ? 'var(--accent-cyan)' : 'var(--text-muted)';
-                lampBtn.style.borderColor = isOn ? 'var(--accent-cyan)' : 'var(--border-color)';
+                window.studioScene.toggleDeskLamp();
             }
         });
     }
 
-    // 8. Ambient Audio System & Compact Control Widget
-    const audioWidget = document.getElementById('audio-widget');
-    const volumeIcon = document.getElementById('volume-icon');
-    const eqBars = [
-        document.getElementById('eq1'),
-        document.getElementById('eq2'),
-        document.getElementById('eq3'),
-        document.getElementById('eq4'),
-        document.getElementById('eq5')
-    ];
-
-    let audioVisualizerLoop = null;
-
-    const animateVisualizer = () => {
-        if (window.lofiAudio && window.lofiAudio.isPlaying) {
-            const freqs = window.lofiAudio.getFrequencyData();
-            if (freqs && freqs.length >= 5) {
-                eqBars.forEach((bar, i) => {
-                    if (bar) {
-                        const val = freqs[i * 2 + 1] || 0;
-                        const height = Math.max(4, Math.min(22, (val / 255) * 24 + Math.random() * 4));
-                        bar.style.height = `${height}px`;
-                    }
-                });
+    // 8. Interactive Studio OS Trigger
+    const enterStudioTriggers = document.querySelectorAll('.enter-studio-trigger');
+    enterStudioTriggers.forEach(btn => {
+        btn.addEventListener('click', (e) => {
+            e.preventDefault();
+            triggerHaptic('action');
+            closeMobileNav();
+            if (window.virtualOS) {
+                window.virtualOS.bootOS();
             }
-            audioVisualizerLoop = requestAnimationFrame(animateVisualizer);
-        } else {
-            eqBars.forEach(bar => {
-                if (bar) bar.style.height = '4px';
-            });
-        }
+        });
+    });
+
+    // 9. Upgraded Ambient Music System & Auto-Minimizing Floating Widget
+    const audioWidget = document.getElementById('audio-widget');
+    const miniPlayerBar = document.getElementById('mini-player-bar');
+    const miniTrackTitle = document.getElementById('mini-track-title');
+    const miniPlayToggleBtn = document.getElementById('mini-play-toggle-btn');
+    const miniVolumeIcon = document.getElementById('mini-volume-icon');
+    const minimizePlayerBtn = document.getElementById('minimize-player-btn');
+    const expandedTrackTitle = document.getElementById('expanded-track-title');
+    const expandedTrackGenre = document.getElementById('expanded-track-genre');
+    const mainPlayBtn = document.getElementById('main-play-btn');
+    const mainPlayIcon = document.getElementById('main-play-icon');
+    const prevTrackBtn = document.getElementById('prev-track-btn');
+    const nextTrackBtn = document.getElementById('next-track-btn');
+    const volumeSlider = document.getElementById('volume-slider');
+    const autoplayPrompt = document.getElementById('autoplay-prompt');
+
+    let autoMinimizeTimeout = null;
+
+    const scheduleAutoMinimize = (delay = 4000) => {
+        if (autoMinimizeTimeout) clearTimeout(autoMinimizeTimeout);
+        autoMinimizeTimeout = setTimeout(() => {
+            if (audioWidget && audioWidget.classList.contains('expanded')) {
+                audioWidget.classList.remove('expanded');
+                audioWidget.classList.add('minimized');
+            }
+        }, delay);
     };
 
-    const updateAudioWidgetUI = (track) => {
-        const audioLabel = document.querySelector('.audio-label');
-        if (audioLabel && track) {
-            audioLabel.innerHTML = `NOW PLAYING: <span class="track-name">${track.name}</span> • <span style="color: var(--text-dim);">${track.genre}</span>`;
+    const expandPlayer = () => {
+        if (!audioWidget) return;
+        audioWidget.classList.remove('minimized');
+        audioWidget.classList.add('expanded');
+        scheduleAutoMinimize(5000);
+    };
+
+    const minimizePlayer = () => {
+        if (!audioWidget) return;
+        if (autoMinimizeTimeout) clearTimeout(autoMinimizeTimeout);
+        audioWidget.classList.remove('expanded');
+        audioWidget.classList.add('minimized');
+    };
+
+    const syncAudioUI = (track) => {
+        if (!track && window.lofiAudio) {
+            track = window.lofiAudio.getCurrentTrack();
         }
+        if (!track) return;
+
+        if (miniTrackTitle) miniTrackTitle.textContent = track.name;
+        if (expandedTrackTitle) expandedTrackTitle.textContent = track.name;
+        if (expandedTrackGenre) expandedTrackGenre.textContent = track.genre;
+
+        const isPlaying = window.lofiAudio ? window.lofiAudio.isPlaying : false;
+
+        if (mainPlayIcon) {
+            mainPlayIcon.setAttribute('data-lucide', isPlaying ? 'pause' : 'play');
+        }
+        if (miniVolumeIcon) {
+            miniVolumeIcon.setAttribute('data-lucide', isPlaying ? 'volume-2' : 'volume-x');
+            miniVolumeIcon.style.color = isPlaying ? 'var(--accent-green)' : 'var(--text-muted)';
+        }
+
+        if (window.lucide) window.lucide.createIcons();
     };
 
     window.onAmbientTrackChange = (track) => {
-        updateAudioWidgetUI(track);
+        syncAudioUI(track);
+        expandPlayer();
     };
 
-    const toggleAudio = () => {
+    if (miniPlayerBar) {
+        miniPlayerBar.addEventListener('click', (e) => {
+            e.stopPropagation();
+            triggerHaptic('button');
+            expandPlayer();
+        });
+    }
+
+    if (minimizePlayerBtn) {
+        minimizePlayerBtn.addEventListener('click', (e) => {
+            e.stopPropagation();
+            triggerHaptic('button');
+            minimizePlayer();
+        });
+    }
+
+    const togglePlayback = () => {
         triggerHaptic('button');
         if (window.lofiAudio) {
             const isPlaying = window.lofiAudio.toggle();
+            syncAudioUI(window.lofiAudio.getCurrentTrack());
             if (isPlaying) {
-                if (audioWidget) audioWidget.style.borderColor = 'var(--accent-green)';
-                if (volumeIcon) {
-                    volumeIcon.setAttribute('data-lucide', 'volume-2');
-                    volumeIcon.style.color = 'var(--accent-green)';
-                }
-                const track = window.lofiAudio.getCurrentTrack();
-                updateAudioWidgetUI(track);
-                animateVisualizer();
-            } else {
-                if (audioWidget) audioWidget.style.borderColor = 'var(--border-color)';
-                if (volumeIcon) {
-                    volumeIcon.setAttribute('data-lucide', 'volume-x');
-                    volumeIcon.style.color = 'var(--text-muted)';
-                }
-                const audioLabel = document.querySelector('.audio-label');
-                if (audioLabel) {
-                    audioLabel.innerHTML = `SOUND: <span style="color: var(--text-dim);">PAUSED / OFF</span>`;
-                }
-                if (audioVisualizerLoop) cancelAnimationFrame(audioVisualizerLoop);
-                eqBars.forEach(bar => { if (bar) bar.style.height = '4px'; });
+                scheduleAutoMinimize(3500);
             }
-            if (window.lucide) window.lucide.createIcons();
         }
     };
 
-    if (audioWidget) {
-        audioWidget.addEventListener('click', toggleAudio);
+    if (mainPlayBtn) {
+        mainPlayBtn.addEventListener('click', (e) => {
+            e.stopPropagation();
+            togglePlayback();
+        });
     }
 
-    // 9. Contact Modal & Inline Conversation Form
-    const contactModal = document.getElementById('contact-modal');
-    const openModalBtns = document.querySelectorAll('#open-contact-modal-btn, .open-contact-trigger, .nav-actions a[href="#contact"]');
-    const closeModalBtn = document.getElementById('close-modal-btn');
-    const contactForm = document.getElementById('contact-form');
-    const formSuccessMsg = document.getElementById('form-success-msg');
-    const inlineForm = document.getElementById('inline-contact-form');
-    const inlineSuccessMsg = document.getElementById('inline-form-success');
+    if (miniPlayToggleBtn) {
+        miniPlayToggleBtn.addEventListener('click', (e) => {
+            e.stopPropagation();
+            togglePlayback();
+        });
+    }
 
-    const handleFormSubmission = (name, email, message, successEl, resetFormCallback) => {
-        triggerHaptic('action');
-        if (successEl) {
-            successEl.style.display = 'block';
+    if (prevTrackBtn) {
+        prevTrackBtn.addEventListener('click', (e) => {
+            e.stopPropagation();
+            triggerHaptic('button');
+            if (window.lofiAudio) {
+                window.lofiAudio.prevTrack();
+                scheduleAutoMinimize(4000);
+            }
+        });
+    }
+
+    if (nextTrackBtn) {
+        nextTrackBtn.addEventListener('click', (e) => {
+            e.stopPropagation();
+            triggerHaptic('button');
+            if (window.lofiAudio) {
+                window.lofiAudio.nextTrack();
+                scheduleAutoMinimize(4000);
+            }
+        });
+    }
+
+    if (volumeSlider) {
+        // Set initial slider position
+        if (window.lofiAudio) {
+            volumeSlider.value = Math.round(window.lofiAudio.getVolume() * 100);
         }
 
-        const subject = encodeURIComponent(`Collaboration Inquiry from ${name}`);
-        const body = encodeURIComponent(`Name: ${name}\nEmail: ${email}\n\nMessage:\n${message}`);
+        volumeSlider.addEventListener('input', (e) => {
+            e.stopPropagation();
+            const val = parseInt(e.target.value, 10) / 100;
+            if (window.lofiAudio) {
+                window.lofiAudio.setVolume(val);
+            }
+            scheduleAutoMinimize(4000);
+        });
+    }
 
-        setTimeout(() => {
-            window.location.href = `mailto:shivamgrover.dev@gmail.com?subject=${subject}&body=${body}`;
-            setTimeout(() => {
-                if (resetFormCallback) resetFormCallback();
-                if (successEl) successEl.style.display = 'none';
-            }, 1200);
-        }, 600);
+    // Autoplay Management
+    if (window.lofiAudio) {
+        window.lofiAudio.attemptAutoplay();
+    }
+
+    // Unblock audio on first user touch / click anywhere if blocked by browser policy
+    const handleFirstInteraction = () => {
+        if (window.lofiAudio && !window.lofiAudio.isPlaying) {
+            const savedPref = localStorage.getItem('portfolio_sound_enabled');
+            if (savedPref !== 'false') {
+                window.lofiAudio.play();
+                syncAudioUI(window.lofiAudio.getCurrentTrack());
+            }
+        }
+        if (autoplayPrompt) autoplayPrompt.style.display = 'none';
+        window.removeEventListener('click', handleFirstInteraction);
+        window.removeEventListener('touchstart', handleFirstInteraction);
     };
 
-    if (inlineForm) {
-        inlineForm.addEventListener('submit', (e) => {
+    window.addEventListener('click', handleFirstInteraction, { once: true });
+    window.addEventListener('touchstart', handleFirstInteraction, { once: true });
+
+    // 10. Contact Form Submissions (Vercel Serverless Function POST /api/contact)
+    const inlineContactForm = document.getElementById('inline-contact-form');
+    const submitBtn = document.getElementById('inline-form-submit-btn');
+    const btnText = document.getElementById('btn-text');
+    const successCard = document.getElementById('inline-form-success');
+    const errorCard = document.getElementById('inline-form-error');
+    const errorMsgText = document.getElementById('error-msg-text');
+    const sendAnotherBtn = document.getElementById('send-another-btn');
+
+    const showFormError = (msg) => {
+        if (errorCard && errorMsgText) {
+            errorMsgText.textContent = msg;
+            errorCard.style.display = 'block';
+        }
+    };
+
+    if (inlineContactForm) {
+        inlineContactForm.addEventListener('submit', async (e) => {
             e.preventDefault();
-            const name = document.getElementById('inline-form-name').value;
-            const email = document.getElementById('inline-form-email').value;
-            const message = document.getElementById('inline-form-message').value;
-            handleFormSubmission(name, email, message, inlineSuccessMsg, () => inlineForm.reset());
+
+            // Client-side field extraction
+            const nameInput = document.getElementById('inline-form-name');
+            const emailInput = document.getElementById('inline-form-email');
+            const subjectInput = document.getElementById('inline-form-subject');
+            const phoneInput = document.getElementById('inline-form-phone');
+            const messageInput = document.getElementById('inline-form-message');
+            const websiteHoneypot = document.getElementById('inline-form-website');
+
+            const name = nameInput ? nameInput.value.trim() : '';
+            const email = emailInput ? emailInput.value.trim() : '';
+            const subject = subjectInput ? subjectInput.value.trim() : '';
+            const phone = phoneInput ? phoneInput.value.trim() : '';
+            const message = messageInput ? messageInput.value.trim() : '';
+            const website = websiteHoneypot ? websiteHoneypot.value : '';
+
+            // 1. Client-Side Input Validation
+            if (!name || name.length < 2) {
+                showFormError('Please enter your name (at least 2 characters).');
+                if (nameInput) nameInput.focus();
+                return;
+            }
+
+            const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+            if (!email || !emailRegex.test(email)) {
+                showFormError('Please enter a valid email address.');
+                if (emailInput) emailInput.focus();
+                return;
+            }
+
+            if (!message || message.length < 5) {
+                showFormError('Please enter your message (at least 5 characters).');
+                if (messageInput) messageInput.focus();
+                return;
+            }
+
+            // Hide previous errors
+            if (errorCard) errorCard.style.display = 'none';
+
+            // 2. Set Submitting Loading State
+            triggerHaptic('action');
+            if (submitBtn) {
+                submitBtn.disabled = true;
+                if (btnText) btnText.textContent = 'SENDING...';
+            }
+
+            try {
+                const response = await fetch('/api/contact', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({
+                        name,
+                        email,
+                        subject: subject || 'New Portfolio Inquiry',
+                        phone,
+                        message,
+                        website
+                    })
+                });
+
+                const result = await response.json().catch(() => ({}));
+
+                if (response.ok && result.success) {
+                    // Success State
+                    triggerHaptic('reset');
+                    if (inlineContactForm) inlineContactForm.style.display = 'none';
+                    if (successCard) successCard.style.display = 'block';
+                    inlineContactForm.reset();
+                } else {
+                    // Error State
+                    triggerHaptic('button');
+                    const err = result.message || "Message couldn't be sent. Please try again in a moment.";
+                    showFormError(err);
+                    if (submitBtn) {
+                        submitBtn.disabled = false;
+                        if (btnText) btnText.textContent = 'TRY AGAIN →';
+                    }
+                }
+            } catch (networkErr) {
+                console.warn('Contact API dispatch error:', networkErr);
+                triggerHaptic('button');
+                showFormError("Message couldn't be sent. Please try again or email directly to codewithshivamdev@gmail.com.");
+                if (submitBtn) {
+                    submitBtn.disabled = false;
+                    if (btnText) btnText.textContent = 'TRY AGAIN →';
+                }
+            }
         });
     }
 
-    const openModal = (e) => {
-        if (e) e.preventDefault();
-        triggerHaptic('button');
-        if (contactModal) contactModal.classList.add('active');
-    };
-
-    const closeModal = () => {
-        triggerHaptic('button');
-        if (contactModal) contactModal.classList.remove('active');
-    };
-
-    openModalBtns.forEach(btn => btn.addEventListener('click', openModal));
-    if (closeModalBtn) closeModalBtn.addEventListener('click', closeModal);
-
-    if (contactModal) {
-        contactModal.addEventListener('click', (e) => {
-            if (e.target === contactModal) closeModal();
+    if (sendAnotherBtn) {
+        sendAnotherBtn.addEventListener('click', () => {
+            triggerHaptic('button');
+            if (successCard) successCard.style.display = 'none';
+            if (errorCard) errorCard.style.display = 'none';
+            if (inlineContactForm) inlineContactForm.style.display = 'block';
+            if (submitBtn) {
+                submitBtn.disabled = false;
+                if (btnText) btnText.textContent = 'SEND MESSAGE →';
+            }
         });
     }
 
-    if (contactForm) {
-        contactForm.addEventListener('submit', (e) => {
-            e.preventDefault();
-            const name = document.getElementById('form-name').value;
-            const email = document.getElementById('form-email').value;
-            const message = document.getElementById('form-message').value;
-            handleFormSubmission(name, email, message, formSuccessMsg, () => {
-                closeModal();
-                contactForm.reset();
-            });
-        });
-    }
-
-    // 10. Comprehensive Keyboard Shortcuts
+    // 11. Keyboard Navigation Controls
     window.addEventListener('keydown', (e) => {
         const activeTag = document.activeElement ? document.activeElement.tagName.toLowerCase() : '';
         const isTyping = activeTag === 'input' || activeTag === 'textarea' || document.activeElement.classList.contains('os-terminal-input');
@@ -519,11 +665,6 @@ document.addEventListener('DOMContentLoaded', () => {
         if (e.key === 'Escape') {
             if (window.virtualOS && window.virtualOS.isActive) {
                 window.virtualOS.exitComputer();
-                return;
-            }
-
-            if (contactModal && contactModal.classList.contains('active')) {
-                closeModal();
                 return;
             }
 
@@ -535,9 +676,6 @@ document.addEventListener('DOMContentLoaded', () => {
                     window.lenis.scrollTo(homeEl || 0, { offset: 0, duration: 1.1 });
                 } else {
                     window.scrollTo({ top: 0, behavior: 'smooth' });
-                }
-                if (window.studioScene && typeof window.studioScene.transitionToSection === 'function') {
-                    window.studioScene.transitionToSection('home');
                 }
             }
             return;
@@ -551,29 +689,8 @@ document.addEventListener('DOMContentLoaded', () => {
             updateProjectDisplay(currentProjectIndex + 1, true);
         }
 
-        const sectionMap = {
-            '1': '#home',
-            '2': '#about',
-            '3': '#projects',
-            '4': '#skills',
-            '5': '#experience',
-            '6': '#contact'
-        };
-
-        if (sectionMap[e.key]) {
-            const targetSec = document.querySelector(sectionMap[e.key]);
-            if (targetSec) {
-                triggerHaptic('button');
-                if (window.lenis) {
-                    window.lenis.scrollTo(targetSec, { offset: 0, duration: 1.1 });
-                } else {
-                    targetSec.scrollIntoView({ behavior: 'smooth' });
-                }
-            }
-        }
-
         if (e.key === 'm' || e.key === 'M') {
-            toggleAudio();
+            togglePlayback();
         }
 
         if (e.key === 'l' || e.key === 'L') {
@@ -581,7 +698,7 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     });
 
-    // 11. Initialize Virtual Computer OS
+    // 12. Initialize Virtual Computer OS
     if (window.virtualOS) {
         window.virtualOS.init();
     }

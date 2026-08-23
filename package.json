@@ -1,0 +1,14 @@
+{
+  "name": "shivam-grover-3d-portfolio",
+  "version": "2.4.0",
+  "description": "Shivam Grover 3D Portfolio with Node.js Serverless Contact Form API",
+  "main": "api/contact.js",
+  "type": "module",
+  "scripts": {
+    "dev": "vercel dev",
+    "build": "echo 'Build complete'"
+  },
+  "dependencies": {
+    "nodemailer": "^6.9.16"
+  }
+}

@@ -104,27 +104,6 @@ const PROJECTS_DATA = [
             "Automated CRM contact lifecycle staging and enrichment",
             "Real-time alerts and executive summary generation via AI"
         ]
-    },
-    {
-        id: "gisremotesensing",
-        number: "06",
-        title: "GIS / Remote Sensing",
-        category: "GEOSPATIAL ANALYTICS & FLOOD DETECTION",
-        tagline: "Multispectral satellite imagery analysis & LULC classification",
-        description: "A geospatial computing pipeline leveraging Google Earth Engine, satellite imagery, and Python machine learning for Land Use / Land Cover (LULC) classification, hydrological modeling, and disaster vulnerability mapping.",
-        technologies: ["Google Earth Engine", "Python", "Remote Sensing", "GIS", "Machine Learning"],
-        coverImage: "assets/covers/gisremotesensing.jpg",
-        liveUrl: null,
-        githubUrl: null,
-        featured: true,
-        hotspotId: "geo_station",
-        cameraPosition: { x: 0.0, y: 2.8, z: 3.4 },
-        cameraTarget: { x: 0.0, y: 1.6, z: -0.2 },
-        highlights: [
-            "Automated satellite multispectral band calculation (NDVI, NDWI, MNDWI)",
-            "Machine learning terrain classification with high accuracy metrics",
-            "Interactive flood risk visualization & zonal vulnerability reports"
-        ]
     }
 ];
 

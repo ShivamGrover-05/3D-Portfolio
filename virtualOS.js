@@ -607,7 +607,7 @@ class VirtualComputerOS {
                 respLine.innerHTML = `• <b>Growthspree</b> — RevOps & Automation Intern (2026 - Present)<br>• <b>Freelance</b> — Web & Interactive Developer (2025 - 2026)`;
                 break;
             case 'contact':
-                respLine.innerHTML = `Email: shivamgrover.dev@gmail.com | LinkedIn: /in/shivamgrover-dev/ | GitHub: /ShivamGrover-05`;
+                respLine.innerHTML = `Email: codewithshivamdev@gmail.com | LinkedIn: /in/shivamgrover-dev/ | GitHub: /ShivamGrover-05`;
                 break;
             case 'clear':
                 output.innerHTML = '';
@@ -674,7 +674,7 @@ class VirtualComputerOS {
                 </div>
                 <div style="display: flex; gap: 10px; margin-top: 14px;">
                     <a href="https://www.linkedin.com/in/shivamgrover-dev/" target="_blank" rel="noopener" class="os-btn">LinkedIn ↗</a>
-                    <a href="mailto:shivamgrover.dev@gmail.com" class="os-btn">Email ✉</a>
+                    <a href="mailto:codewithshivamdev@gmail.com" class="os-btn">Email ✉</a>
                 </div>
             </div>
         `;
@@ -780,9 +780,9 @@ class VirtualComputerOS {
             <div class="os-contact-wrap">
                 <h3 style="font-family: var(--font-heading); font-size: 1.2rem; color: #fff; margin-bottom: 8px;">Direct Communication</h3>
                 <div class="os-contact-links">
-                    <a href="mailto:shivamgrover.dev@gmail.com" class="os-contact-item">
+                    <a href="mailto:codewithshivamdev@gmail.com" class="os-contact-item">
                         <i data-lucide="mail" style="color: var(--accent-cyan);"></i>
-                        <div><div style="font-size: 0.7rem; color: var(--text-dim);">EMAIL</div><div style="color: #fff;">shivamgrover.dev@gmail.com</div></div>
+                        <div><div style="font-size: 0.7rem; color: var(--text-dim);">EMAIL</div><div style="color: #fff;">codewithshivamdev@gmail.com</div></div>
                     </a>
                     <a href="https://www.linkedin.com/in/shivamgrover-dev/" target="_blank" rel="noopener" class="os-contact-item">
                         <i data-lucide="linkedin" style="color: #0077b5;"></i>

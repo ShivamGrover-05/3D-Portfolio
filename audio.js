@@ -9,7 +9,9 @@ class AmbientMusicSystem {
         this.currentTrackGain = null;
         this.trackTimer = null;
         this.activeNodes = [];
-        this.volumeLevel = 0.30; // Target 30% default volume (audible on mobile & desktop)
+        this.volumeLevel = 0.30; // Target 30% default master volume (calibrated for mobile & desktop)
+        this.autoMinimizeTimer = null;
+        this.isExpanded = false;
         
         // Restore volume preference if present
         const savedVol = localStorage.getItem('portfolio_audio_volume');
@@ -20,7 +22,7 @@ class AmbientMusicSystem {
             }
         }
 
-        // 5 Calm studio ambient tracks with distinct musical moods
+        // 8 Royalty-Free Calm studio ambient tracks with distinct musical moods
         this.trackCatalog = [
             {
                 id: "ambient-01",
@@ -66,8 +68,8 @@ class AmbientMusicSystem {
             },
             {
                 id: "ambient-04",
-                name: "Ethereal Waves",
-                genre: "Cinematic Ambient Horizon",
+                name: "Ethereal Horizon",
+                genre: "Cinematic Ambient Atmosphere",
                 bpm: 54,
                 chords: [
                     [174.61, 220.00, 261.63, 329.63, 392.00], // Fmaj9
@@ -80,8 +82,8 @@ class AmbientMusicSystem {
             },
             {
                 id: "ambient-05",
-                name: "Calm Reverie",
-                genre: "Warm Acoustic Resonance",
+                name: "Warm Resonance",
+                genre: "Acoustic Mellow Harmonics",
                 bpm: 58,
                 chords: [
                     [130.81, 164.81, 196.00, 246.94, 329.63], // Cmaj9
@@ -91,6 +93,48 @@ class AmbientMusicSystem {
                 ],
                 timbre: "acoustic_mellow",
                 tempoSec: 4.0
+            },
+            {
+                id: "ambient-06",
+                name: "Solitude & Sunsets",
+                genre: "Warm Tape Saturation",
+                bpm: 62,
+                chords: [
+                    [164.81, 196.00, 246.94, 293.66, 392.00], // Em7
+                    [130.81, 164.81, 196.00, 246.94, 329.63], // Cmaj9
+                    [146.83, 174.61, 220.00, 261.63, 329.63], // Dm9
+                    [98.00, 146.83, 196.00, 246.94, 293.66]   // G6
+                ],
+                timbre: "tape_analog",
+                tempoSec: 3.9
+            },
+            {
+                id: "ambient-07",
+                name: "Night Owl Code",
+                genre: "Minimalist Soft Synth",
+                bpm: 66,
+                chords: [
+                    [110.00, 146.83, 174.61, 220.00, 261.63], // Dm7/A
+                    [123.47, 164.81, 196.00, 246.94, 293.66], // Em7/B
+                    [130.81, 164.81, 196.00, 246.94, 329.63], // Cmaj9
+                    [146.83, 220.00, 261.63, 329.63, 392.00]  // Dsus4(9)
+                ],
+                timbre: "ambient_pad",
+                tempoSec: 3.7
+            },
+            {
+                id: "ambient-08",
+                name: "Velvet Breeze",
+                genre: "Gentle Electric Piano",
+                bpm: 56,
+                chords: [
+                    [130.81, 164.81, 196.00, 261.63, 329.63], // Cmaj7
+                    [110.00, 130.81, 164.81, 196.00, 246.94], // Am9
+                    [87.31, 130.81, 174.61, 220.00, 261.63],  // Fmaj7
+                    [98.00, 146.83, 196.00, 246.94, 329.63]   // G13
+                ],
+                timbre: "warm_rhodes",
+                tempoSec: 4.1
             }
         ];
 
@@ -99,20 +143,20 @@ class AmbientMusicSystem {
         this.chordStep = 0;
         this.shufflePlaylist();
 
-        // Restore sound preference if available
+        // Check if sound was previously enabled or blocked
         const savedPref = localStorage.getItem('portfolio_sound_enabled');
-        this.soundPreference = savedPref === 'true';
+        this.soundPreference = savedPref !== 'false';
     }
 
     shufflePlaylist() {
-        const indices = [0, 1, 2, 3, 4];
+        const count = this.trackCatalog.length;
+        const indices = Array.from({ length: count }, (_, i) => i);
         // Fisher-Yates Shuffle
         for (let i = indices.length - 1; i > 0; i--) {
             const j = Math.floor(Math.random() * (i + 1));
             [indices[i], indices[j]] = [indices[j], indices[i]];
         }
 
-        // Avoid repeating the previous track on reshuffle
         if (this.playlist.length > 0 && indices[0] === this.playlist[this.playlist.length - 1]) {
             [indices[0], indices[1]] = [indices[1], indices[0]];
         }
@@ -139,7 +183,6 @@ class AmbientMusicSystem {
             this.dataArray = new Uint8Array(this.analyser.frequencyBinCount);
 
             this.masterGain = this.ctx.createGain();
-            // Clear, calibrated 30% master volume
             this.masterGain.gain.setValueAtTime(this.volumeLevel, this.ctx.currentTime);
             this.masterGain.connect(this.analyser);
             this.analyser.connect(this.ctx.destination);
@@ -190,9 +233,7 @@ class AmbientMusicSystem {
             filter.connect(noiseGain);
             noiseGain.connect(this.masterGain);
             whiteNoise.start();
-        } catch (e) {
-            // Audio policy ignore
-        }
+        } catch (e) {}
     }
 
     playProgression() {
@@ -220,7 +261,6 @@ class AmbientMusicSystem {
                 filter.frequency.exponentialRampToValueAtTime(360, now + duration * 0.85);
 
                 gain.gain.setValueAtTime(0.001, now);
-                // Clear, rich acoustic chord envelope
                 gain.gain.linearRampToValueAtTime(0.09 / (i * 0.4 + 1), now + 0.6 + i * 0.04);
                 gain.gain.exponentialRampToValueAtTime(0.001, now + duration);
 
@@ -250,15 +290,31 @@ class AmbientMusicSystem {
 
         this.chordStep++;
 
-        // Every 8 chords (approx 30 seconds), crossfade to next shuffled track
+        // Crossfade every 8 chords (~32 seconds)
         if (this.chordStep % 8 === 0) {
             this.crossfadeToNextTrack();
         }
 
-        // Schedule next chord
         this.trackTimer = setTimeout(() => {
             this.playProgression();
         }, duration * 1000 * 0.95);
+    }
+
+    nextTrack() {
+        this.crossfadeToNextTrack();
+    }
+
+    prevTrack() {
+        this.playlistIndex = (this.playlistIndex - 1 + this.playlist.length) % this.playlist.length;
+        this.chordStep = 0;
+        const track = this.getCurrentTrack();
+        if (window.onAmbientTrackChange) {
+            window.onAmbientTrackChange(track);
+        }
+        if (this.isPlaying) {
+            if (this.trackTimer) clearTimeout(this.trackTimer);
+            this.playProgression();
+        }
     }
 
     crossfadeToNextTrack() {
@@ -266,37 +322,58 @@ class AmbientMusicSystem {
         if (this.playlistIndex === 0) {
             this.shufflePlaylist();
         }
+        this.chordStep = 0;
         
-        // Notify UI of track change
         const track = this.getCurrentTrack();
         if (window.onAmbientTrackChange) {
             window.onAmbientTrackChange(track);
         }
     }
 
-    toggle() {
-        if (!this.ctx) {
-            this.init();
-        }
-
+    play() {
+        if (!this.ctx) this.init();
         if (this.ctx && this.ctx.state === 'suspended') {
             this.ctx.resume();
         }
-
-        this.isPlaying = !this.isPlaying;
-        localStorage.setItem('portfolio_sound_enabled', this.isPlaying ? 'true' : 'false');
-
-        if (this.isPlaying) {
-            this.playProgression();
-            const track = this.getCurrentTrack();
-            if (window.onAmbientTrackChange) {
-                window.onAmbientTrackChange(track);
-            }
-        } else {
-            if (this.trackTimer) clearTimeout(this.trackTimer);
+        this.isPlaying = true;
+        localStorage.setItem('portfolio_sound_enabled', 'true');
+        this.playProgression();
+        const track = this.getCurrentTrack();
+        if (window.onAmbientTrackChange) {
+            window.onAmbientTrackChange(track);
         }
+        return true;
+    }
 
-        return this.isPlaying;
+    pause() {
+        this.isPlaying = false;
+        localStorage.setItem('portfolio_sound_enabled', 'false');
+        if (this.trackTimer) clearTimeout(this.trackTimer);
+        return false;
+    }
+
+    toggle() {
+        if (this.isPlaying) {
+            return this.pause();
+        } else {
+            return this.play();
+        }
+    }
+
+    attemptAutoplay() {
+        const savedPref = localStorage.getItem('portfolio_sound_enabled');
+        if (savedPref === 'false') return; // User explicitly turned it off
+
+        this.init();
+        if (this.ctx) {
+            this.ctx.resume().then(() => {
+                if (this.ctx.state === 'running') {
+                    this.play();
+                }
+            }).catch(() => {
+                // Autoplay blocked by browser policy, will resume on first user interaction
+            });
+        }
     }
 
     getFrequencyData() {
