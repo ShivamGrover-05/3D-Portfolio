@@ -69,6 +69,6 @@ This repository, including its 3D models, graphics, styling, code architecture, 
 No part of this project may be copied, reproduced, modified, republished, distributed, or used in commercial/non-commercial projects without explicit prior written consent from Shivam Grover.
 
 To request permission or discuss collaboration:
-- **Email:** [shivamgrover195@gmail.com](mailto:shivamgrover195@gmail.com) / [shivamgrover.dev@gmail.com](mailto:shivamgrover.dev@gmail.com)
+- **Email:** [shivamgrover195@gmail.com](mailto:shivamgrover195@gmail.com) / [codewithshivamdev@gmail.com](mailto:codewithshivamdev@gmail.com)
 - **LinkedIn:** [linkedin.com/in/shivamgrover-dev/](https://www.linkedin.com/in/shivamgrover-dev/)
 - **GitHub:** [github.com/ShivamGrover-05](https://github.com/ShivamGrover-05)
