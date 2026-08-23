@@ -526,8 +526,7 @@ class StudioScene {
             { id: 'laptop', projectId: 'collegespathshala', pos: [-0.9, 1.45, 0.35], label: 'CollegesPathshala' },
             { id: 'desk_display', projectId: 'vacationvisits', pos: [0.65, 1.38, 0.45], label: 'Vacation Visits' },
             { id: 'second_display', projectId: 'sagaholidays', pos: [1.15, 1.42, 0.38], label: 'Saga Holidays' },
-            { id: 'terminal', projectId: 'aiautomation', pos: [-0.45, 0.95, 0.2], label: 'AI Automation Hub' },
-            { id: 'geo_station', projectId: 'gisremotesensing', pos: [0.0, 1.45, -0.3], label: 'GIS Remote Sensing' }
+            { id: 'terminal', projectId: 'aiautomation', pos: [-0.45, 0.95, 0.2], label: 'AI Automation Hub' }
         ];
 
         hotspotConfigs.forEach(cfg => {
