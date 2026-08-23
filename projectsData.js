@@ -9,7 +9,7 @@ const PROJECTS_DATA = [
         description: "An interactive, GPU-accelerated 3D hardware visualizer and product showcase built with TypeScript, Three.js shaders, and custom GSAP camera choreography. Designed to deliver a high-impact digital showroom with real-time material rendering.",
         technologies: ["TypeScript", "Three.js", "WebGL", "GSAP", "TailwindCSS"],
         coverImage: "assets/covers/aevonix.jpg",
-        liveUrl: null,
+        liveUrl: "https://aevonix-controller.vercel.app/",
         githubUrl: "https://github.com/ShivamGrover-05/aevonix-controller",
         featured: true,
         hotspotId: "monitor",
