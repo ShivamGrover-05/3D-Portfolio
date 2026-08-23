@@ -1,0 +1,690 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+    <title>Shivam Grover — Creative Developer & Automation Specialist</title>
+    <meta name="description" content="Portfolio of Shivam Grover: Full-stack developer, 3D web experience creator, and automation enthusiast based in India.">
+    <meta name="theme-color" content="#06070d">
+    
+    <!-- Open Graph / Social Media -->
+    <meta property="og:type" content="website">
+    <meta property="og:title" content="Shivam Grover — 3D Portfolio">
+    <meta property="og:description" content="I craft interactive web experiences, automate workflows, and build digital products that make an impact.">
+    
+    <!-- Stylesheet -->
+    <link rel="stylesheet" href="style.css">
+    
+    <!-- Lucide Icons -->
+    <script src="https://unpkg.com/lucide@latest"></script>
+    
+    <!-- Three.js + Loaders + Controls -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/loaders/GLTFLoader.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/controls/OrbitControls.js"></script>
+
+    <!-- Lenis Smooth Scroll -->
+    <script src="https://cdn.jsdelivr.net/npm/lenis@1.1.18/dist/lenis.min.js"></script>
+
+    <!-- GSAP for Smooth Choreography -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.2/gsap.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.2/ScrollTrigger.min.js"></script>
+</head>
+<body>
+
+    <!-- 3D WebGL Canvas Layer -->
+    <div id="webgl-container"></div>
+
+    <!-- 2D Fallback Banner (Visible only if WebGL is unsupported or tier is FALLBACK) -->
+    <div id="fallback-2d-banner" class="fallback-banner" style="display: none;">
+        <span>✨ You are viewing the lightweight 2D Studio experience</span>
+    </div>
+
+    <!-- Floating Reset Desk View Button -->
+    <button id="reset-desk-view-btn" class="reset-view-pill" title="Reset 3D Workspace View">
+        <i data-lucide="rotate-ccw" style="width: 14px; height: 14px;"></i> RESET VIEW
+    </button>
+
+    <!-- Loading Screen -->
+    <div id="loading-indicator">
+        <div class="loader-spinner"></div>
+        <div style="font-family: var(--font-mono); font-size: 0.85rem; color: #a29bfe; letter-spacing: 2px;">
+            INITIALIZING 3D STUDIO...
+        </div>
+        <div class="loader-bar">
+            <div id="loading-bar-fill"></div>
+        </div>
+    </div>
+
+    <!-- Top Navigation Bar -->
+    <header class="navbar">
+        <a href="#home" class="brand">
+            SHIVAM<span class="dot">.DEV</span>
+        </a>
+        <nav>
+            <ul class="nav-links">
+                <li><a href="#home" class="nav-link active" data-section="home"><span class="num">01</span> HOME</a></li>
+                <li><a href="#about" class="nav-link" data-section="about"><span class="num">02</span> ABOUT</a></li>
+                <li><a href="#projects" class="nav-link" data-section="projects"><span class="num">03</span> PROJECTS</a></li>
+                <li><a href="#skills" class="nav-link" data-section="skills"><span class="num">04</span> SKILLS</a></li>
+                <li><a href="#experience" class="nav-link" data-section="experience"><span class="num">05</span> EXPERIENCE</a></li>
+                <li><a href="#contact" class="nav-link" data-section="contact"><span class="num">06</span> CONTACT</a></li>
+            </ul>
+        </nav>
+        <div class="nav-actions">
+            <a href="https://github.com/ShivamGrover-05" target="_blank" rel="noopener" class="social-icon" title="GitHub">
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 19c-5 1.5-5-2.5-7-3m14 6v-3.87a3.37 3.37 0 0 0-.94-2.61c3.14-.35 6.44-1.54 6.44-7A5.44 5.44 0 0 0 20 4.77 5.07 5.07 0 0 0 19.91 1S18.73.65 16 2.48a13.38 13.38 0 0 0-7 0C6.27.65 5.09 1 5.09 1A5.07 5.07 0 0 0 5 4.77a5.44 5.44 0 0 0-1.5 3.78c0 5.42 3.3 6.61 6.44 7A3.37 3.37 0 0 0 9 18.13V22"></path></svg>
+            </a>
+            <a href="https://www.linkedin.com/in/shivamgrover-dev/" target="_blank" rel="noopener" class="social-icon" title="LinkedIn">
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M16 8a6 6 0 0 1 6 6v7h-4v-7a2 2 0 0 0-2-2 2 2 0 0 0-2 2v7h-4v-7a6 6 0 0 1 6-6z"></path><rect x="2" y="9" width="4" height="12"></rect><circle cx="4" cy="4" r="2"></circle></svg>
+            </a>
+            <a href="mailto:shivamgrover.dev@gmail.com" class="social-icon" title="Email">
+                <i data-lucide="mail"></i>
+            </a>
+            <button id="toggle-lamp-btn" class="social-icon" title="Toggle Studio Desk Lamp">
+                <i data-lucide="sun"></i>
+            </button>
+            <a href="#contact" class="btn-primary">
+                LET'S CONNECT <i data-lucide="arrow-right" style="width: 16px; height: 16px;"></i>
+            </a>
+        </div>
+    </header>
+
+    <!-- Interactive Virtual Computer OS Layer -->
+    <div id="virtual-computer-layer" class="virtual-computer-overlay">
+        <div class="virtual-computer-viewport">
+            
+            <!-- Desktop Top System Bar -->
+            <div class="os-top-system-bar">
+                <div class="os-system-brand">
+                    <span class="os-dot-live"></span>
+                    <span>SHIVAM OS v2.4</span>
+                    <span style="color: var(--text-dim); font-size: 0.7rem;">&bull; WORKSTATION</span>
+                </div>
+                <div class="os-top-actions">
+                    <button id="exit-computer-btn" class="os-exit-btn">
+                        <i data-lucide="x" style="width: 14px; height: 14px;"></i> EXIT COMPUTER [ESC]
+                    </button>
+                </div>
+            </div>
+
+            <!-- Boot Sequence Screen -->
+            <div id="os-boot-screen" class="os-boot-container">
+                <div class="os-boot-content">
+                    <div class="os-boot-logo">SHIVAM OS</div>
+                    <div class="os-boot-spinner"></div>
+                    <div class="os-boot-logs">
+                        <div>&gt; MOUNTING WORKSPACE... [OK]</div>
+                        <div>&gt; INITIALIZING SHADERS & GLB ASSETS... [OK]</div>
+                        <div>&gt; LAUNCHING REVOPS & AUTOMATION ENGINE... [OK]</div>
+                        <div>&gt; DESKTOP ENVIRONMENT READY [ONLINE]</div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Desktop Viewport (For Laptops & Desktops) -->
+            <div id="os-desktop-screen" class="os-desktop-container">
+                <!-- Idle / Standby Screen -->
+                <div id="os-idle-screen" class="os-idle-screen">
+                    <div class="os-idle-brand">SHIVAM.DEV</div>
+                    <div class="os-idle-status">SYSTEM STANDBY</div>
+                    <div class="os-idle-cta">CLICK TO START</div>
+                </div>
+
+                <!-- Desktop App Icons Grid -->
+                <div class="os-desktop-grid">
+                    <div class="desktop-icon" data-app="projects">
+                        <div class="icon-box"><i data-lucide="folder-git-2"></i></div>
+                        <span class="icon-label">Projects</span>
+                    </div>
+                    <div class="desktop-icon" data-app="browser">
+                        <div class="icon-box"><i data-lucide="globe"></i></div>
+                        <span class="icon-label">Browser</span>
+                    </div>
+                    <div class="desktop-icon" data-app="terminal">
+                        <div class="icon-box"><i data-lucide="terminal"></i></div>
+                        <span class="icon-label">Terminal</span>
+                    </div>
+                    <div class="desktop-icon" data-app="mycomputer">
+                        <div class="icon-box"><i data-lucide="hard-drive"></i></div>
+                        <span class="icon-label">My Computer</span>
+                    </div>
+                    <div class="desktop-icon" data-app="resume">
+                        <div class="icon-box"><i data-lucide="file-text"></i></div>
+                        <span class="icon-label">Resume.pdf</span>
+                    </div>
+                    <div class="desktop-icon" data-app="about">
+                        <div class="icon-box"><i data-lucide="user"></i></div>
+                        <span class="icon-label">About Me</span>
+                    </div>
+                    <div class="desktop-icon" data-app="settings">
+                        <div class="icon-box"><i data-lucide="sliders"></i></div>
+                        <span class="icon-label">Settings</span>
+                    </div>
+                    <div class="desktop-icon" data-app="contact">
+                        <div class="icon-box"><i data-lucide="mail"></i></div>
+                        <span class="icon-label">Contact</span>
+                    </div>
+                </div>
+
+                <!-- Draggable Windows Area -->
+                <div id="os-windows-container" class="os-windows-area"></div>
+
+                <!-- Desktop OS Taskbar -->
+                <div class="os-taskbar">
+                    <button class="os-start-btn" id="os-start-btn">
+                        <i data-lucide="zap" style="width: 14px; height: 14px; color: var(--accent-cyan);"></i> SHIVAM OS
+                    </button>
+                    <div class="os-taskbar-tasks" id="os-taskbar-tasks"></div>
+                    <div class="os-system-tray">
+                        <span class="tray-pill"><i data-lucide="cpu" style="width: 12px; height: 12px;"></i> ONLINE</span>
+                        <span id="os-taskbar-clock" class="tray-clock">12:00</span>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Dedicated Mobile Studio OS Workstation (For Phones & Tablets) -->
+            <div id="os-mobile-workstation" class="mobile-os-container" style="display: none;">
+                <!-- Mobile Status Bar -->
+                <div class="mobile-os-status-bar">
+                    <span id="mobile-os-clock" class="mobile-status-time">12:00</span>
+                    <div class="mobile-status-badges">
+                        <span class="mobile-badge-chip green">ONLINE</span>
+                        <span class="mobile-badge-chip cyan">GPU OPTIMIZED</span>
+                    </div>
+                    <button id="mobile-os-exit-btn" class="mobile-os-close-btn" title="Exit Studio OS">
+                        <i data-lucide="x" style="width: 16px; height: 16px;"></i>
+                    </button>
+                </div>
+
+                <!-- Mobile Header Notification Banner -->
+                <div class="mobile-os-banner">
+                    <div class="banner-title">SHIVAM STUDIO OS</div>
+                    <div class="banner-sub">Workstation • Full-Stack Developer & Automation Engine</div>
+                </div>
+
+                <!-- Mobile Apps Grid (Touch-friendly ~48px+ hit targets) -->
+                <div class="mobile-os-apps-grid">
+                    <button class="mobile-os-app-item" data-app="projects">
+                        <div class="app-icon-wrap cyan"><i data-lucide="folder-git-2"></i></div>
+                        <span class="app-label">Projects</span>
+                    </button>
+                    <button class="mobile-os-app-item" data-app="browser">
+                        <div class="app-icon-wrap purple"><i data-lucide="globe"></i></div>
+                        <span class="app-label">Browser</span>
+                    </button>
+                    <button class="mobile-os-app-item" data-app="terminal">
+                        <div class="app-icon-wrap green"><i data-lucide="terminal"></i></div>
+                        <span class="app-label">Terminal</span>
+                    </button>
+                    <button class="mobile-os-app-item" data-app="about">
+                        <div class="app-icon-wrap cyan"><i data-lucide="user"></i></div>
+                        <span class="app-label">About Me</span>
+                    </button>
+                    <button class="mobile-os-app-item" data-app="resume">
+                        <div class="app-icon-wrap lime"><i data-lucide="file-text"></i></div>
+                        <span class="app-label">Resume</span>
+                    </button>
+                    <button class="mobile-os-app-item" data-app="settings">
+                        <div class="app-icon-wrap purple"><i data-lucide="sliders"></i></div>
+                        <span class="app-label">Settings</span>
+                    </button>
+                    <button class="mobile-os-app-item" data-app="contact">
+                        <div class="app-icon-wrap green"><i data-lucide="mail"></i></div>
+                        <span class="app-label">Contact</span>
+                    </button>
+                </div>
+
+                <!-- Mobile Bottom Dock -->
+                <div class="mobile-os-dock">
+                    <button class="mobile-dock-btn active" data-app="home" title="Home Screen">
+                        <i data-lucide="layout-grid"></i>
+                        <span>Home</span>
+                    </button>
+                    <button class="mobile-dock-btn" data-app="projects" title="Projects">
+                        <i data-lucide="folder-git-2"></i>
+                        <span>Projects</span>
+                    </button>
+                    <button class="mobile-dock-btn" data-app="terminal" title="Terminal">
+                        <i data-lucide="terminal"></i>
+                        <span>Terminal</span>
+                    </button>
+                    <button class="mobile-dock-btn" data-app="contact" title="Contact">
+                        <i data-lucide="mail"></i>
+                        <span>Contact</span>
+                    </button>
+                </div>
+
+                <!-- Mobile App Modal Viewport -->
+                <div id="mobile-app-modal-view" class="mobile-app-fullscreen-modal">
+                    <div class="mobile-modal-header">
+                        <button id="mobile-app-back-btn" class="mobile-back-btn">
+                            <i data-lucide="arrow-left" style="width: 18px; height: 18px;"></i>
+                        </button>
+                        <span id="mobile-app-title" class="mobile-modal-title">Application</span>
+                        <div style="width: 32px;"></div>
+                    </div>
+                    <div id="mobile-app-body-content" class="mobile-modal-body"></div>
+                </div>
+
+            </div>
+
+        </div>
+    </div>
+
+    <!-- Content UI Layer -->
+    <main id="content-layer">
+
+        <!-- SECTION 01: HERO -->
+        <section id="home" class="section hero-section">
+            <div class="scene-tag">SCENE</div>
+            <div class="scene-num">01</div>
+            <div class="hero-subtag">CREATIVE DEVELOPER & AUTOMATION SPECIALIST</div>
+            <h1 class="hero-title">
+                I BUILD DIGITAL EXPERIENCES THAT FEEL <span class="glow-word">ALIVE.</span>
+            </h1>
+            <p class="hero-description">
+                I craft interactive web experiences, automate complex workflows, and build high-performance digital products that make an impact.
+            </p>
+            <div class="hero-cta">
+                <button class="btn-primary enter-studio-trigger" title="Launch Interactive Virtual Computer">
+                    ENTER STUDIO / OS <i data-lucide="monitor" style="width: 16px; height: 16px;"></i>
+                </button>
+                <a href="#projects" class="btn-ghost">
+                    VIEW MY WORK <i data-lucide="external-link" style="width: 16px; height: 16px;"></i>
+                </a>
+            </div>
+            <div class="hero-status-list">
+                <div class="status-badge"><span class="dot"></span> BASED IN NEW DELHI, INDIA</div>
+                <div class="status-badge"><span class="dot"></span> AVAILABLE FOR SELECT PROJECTS & FULL-TIME ROLES</div>
+            </div>
+
+            <!-- Floating Hero Project Showcase Widget -->
+            <div class="hero-projects-preview">
+                <div class="preview-header">
+                    <span>&gt; FEATURED BUILDS</span>
+                    <i data-lucide="layers" style="width: 14px; height: 14px;"></i>
+                </div>
+                <div class="preview-grid">
+                    <a href="https://collegespathshala.com/#home" target="_blank" rel="noopener" class="preview-thumb">
+                        <div class="thumb-title">CollegesPathshala</div>
+                        <div class="thumb-tag">Education Platform</div>
+                    </a>
+                    <a href="https://vacationvisits.in/" target="_blank" rel="noopener" class="preview-thumb">
+                        <div class="thumb-title">Vacation Visits</div>
+                        <div class="thumb-tag">Travel Experience</div>
+                    </a>
+                    <a href="https://sagaholidays.in/" target="_blank" rel="noopener" class="preview-thumb">
+                        <div class="thumb-title">Saga Holidays</div>
+                        <div class="thumb-tag">Tour Booking</div>
+                    </a>
+                    <a href="https://github.com/ShivamGrover-05/aevonix-controller" target="_blank" rel="noopener" class="preview-thumb">
+                        <div class="thumb-title">Aevonix 3D</div>
+                        <div class="thumb-tag">Three.js Controller</div>
+                    </a>
+                </div>
+            </div>
+
+            <div class="scroll-indicator">
+                <span>SCROLL TO EXPLORE</span>
+                <div class="mouse-icon"></div>
+            </div>
+        </section>
+
+        <!-- SECTION 02: ABOUT ME -->
+        <section id="about" class="section">
+            <div class="section-meta">02 / ABOUT ME</div>
+            <h2 class="section-title">ENGINEERING WITH PURPOSE</h2>
+            
+            <div class="about-grid">
+                <div class="about-content glass-panel">
+                    <p>
+                        I'm Shivam Grover, a developer and automation enthusiast who loves building smart, interactive, and efficient digital solutions. From responsive full-stack websites to scalable business workflows, I turn ambitious ideas into seamless experiences.
+                    </p>
+                    <p>
+                        Passionate about modern web technologies like Next.js, Three.js, and Node.js, combined with robust workflow automation platforms like n8n and HubSpot.
+                    </p>
+                    <div class="about-badges">
+                        <div class="about-badge"><span class="badge-dot"></span> BCA Student</div>
+                        <div class="about-badge"><span class="badge-dot"></span> Freelance Web Developer</div>
+                        <div class="about-badge"><span class="badge-dot"></span> Automation Enthusiast</div>
+                        <div class="about-badge"><span class="badge-dot"></span> Based in India</div>
+                    </div>
+                </div>
+
+                <div class="interactive-terminal glass-panel">
+                    <div class="terminal-header">
+                        <span class="terminal-btn red"></span>
+                        <span class="terminal-btn yellow"></span>
+                        <span class="terminal-btn green"></span>
+                        <span style="font-size: 0.72rem; color: var(--text-dim); margin-left: 8px;">developer_profile.sh</span>
+                    </div>
+                    <div class="terminal-body">
+                        <div><span style="color: var(--accent-green);">$</span> cat profile.json</div>
+                        <div style="color: #cbd5e1; margin-top: 6px;">
+                            {<br>
+                            &nbsp;&nbsp;"name": "Shivam Grover",<br>
+                            &nbsp;&nbsp;"role": "Full-Stack Developer & Automation",<br>
+                            &nbsp;&nbsp;"focus": ["3D WebGL", "Interactive UI", "n8n / RevOps"],<br>
+                            &nbsp;&nbsp;"location": "New Delhi, India",<br>
+                            &nbsp;&nbsp;"status": "Building High-Impact Products"<br>
+                            }
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- SECTION 03: PROJECTS EXHIBITION -->
+        <section id="projects" class="section">
+            <div class="section-meta">03 / DIGITAL EXHIBITION</div>
+            <h2 class="section-title">SELECTED WORK & BUILDS</h2>
+
+            <!-- Digital Exhibition Stage -->
+            <div class="exhibition-stage glass-panel">
+                
+                <!-- Left Column: Interactive Project Visualizer -->
+                <div class="exhibition-cover-wrap">
+                    <div class="cover-image-container" id="project-cover-container">
+                        <img src="assets/covers/aevonix.jpg" id="project-cover-img" alt="Project Cover" class="cover-img">
+                        <div class="cover-hotspot-tag" id="project-hotspot-name">AEVONIX</div>
+                    </div>
+
+                    <!-- Numbered Project Switcher Navigation -->
+                    <div class="numbered-switcher">
+                        <button class="nav-arrow-btn" id="project-prev-btn" title="Previous Project">
+                            <i data-lucide="chevron-left"></i>
+                        </button>
+                        <button class="switcher-num-btn active" data-index="0">01</button>
+                        <button class="switcher-num-btn" data-index="1">02</button>
+                        <button class="switcher-num-btn" data-index="2">03</button>
+                        <button class="switcher-num-btn" data-index="3">04</button>
+                        <button class="switcher-num-btn" data-index="4">05</button>
+                        <button class="switcher-num-btn" data-index="5">06</button>
+                        <button class="nav-arrow-btn" id="project-next-btn" title="Next Project">
+                            <i data-lucide="chevron-right"></i>
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Right Column: Project Details & Technical Specs -->
+                <div class="exhibition-info-wrap" id="project-info-container">
+                    <div class="info-top-meta">
+                        <span class="index-counter" id="project-index-counter">01 / 06</span>
+                        <span class="category-badge" id="project-category">INTERACTIVE 3D WEB EXPERIENCE</span>
+                    </div>
+
+                    <h3 class="project-exhibit-title" id="project-title">AEVONIX</h3>
+                    <p class="project-exhibit-tagline" id="project-tagline">Futuristic 3D controller visualizer & interactive product website</p>
+                    <p class="project-exhibit-desc" id="project-description">
+                        An interactive, GPU-accelerated 3D hardware visualizer and product showcase built with TypeScript, Three.js shaders, and custom GSAP camera choreography.
+                    </p>
+
+                    <div class="project-highlights">
+                        <div class="highlights-title">KEY HIGHLIGHTS</div>
+                        <ul id="project-highlights-list">
+                            <li><span class="bullet">&bull;</span> Real-time 60fps WebGL model inspection</li>
+                            <li><span class="bullet">&bull;</span> Cinematic camera choreography</li>
+                            <li><span class="bullet">&bull;</span> Modular TypeScript architecture</li>
+                        </ul>
+                    </div>
+
+                    <div class="project-technologies" id="project-tech-container">
+                        <span class="tech-tag">TypeScript</span>
+                        <span class="tech-tag">Three.js</span>
+                        <span class="tech-tag">WebGL</span>
+                        <span class="tech-tag">GSAP</span>
+                        <span class="tech-tag">TailwindCSS</span>
+                    </div>
+
+                    <div class="project-actions">
+                        <a href="#" target="_blank" rel="noopener" id="project-live-btn" class="btn-primary" style="display: none;">
+                            LIVE PROJECT <i data-lucide="external-link" style="width: 15px; height: 15px;"></i>
+                        </a>
+                        <a href="https://github.com/ShivamGrover-05/aevonix-controller" target="_blank" rel="noopener" id="project-github-btn" class="btn-ghost">
+                            <i data-lucide="github" style="width: 16px; height: 16px;"></i> SOURCE CODE
+                        </a>
+                        <button id="project-focus-3d-btn" class="btn-ghost" title="Focus 3D Workspace Camera">
+                            <i data-lucide="camera" style="width: 16px; height: 16px;"></i> 3D FOCUS
+                        </button>
+                    </div>
+                </div>
+
+            </div>
+        </section>
+
+        <!-- SECTION 04: SKILLS -->
+        <section id="skills" class="section">
+            <div class="section-meta">04 / CORE CAPABILITIES</div>
+            <h2 class="section-title">SKILLS & TECHNOLOGIES</h2>
+
+            <div class="skills-grid">
+                <div class="skill-category glass-panel">
+                    <div class="category-header">
+                        <i data-lucide="code-2" style="color: var(--accent-cyan);"></i>
+                        <h3>Frontend & 3D</h3>
+                    </div>
+                    <div class="skill-tags">
+                        <span class="skill-pill">Three.js</span>
+                        <span class="skill-pill">WebGL / Shaders</span>
+                        <span class="skill-pill">TypeScript</span>
+                        <span class="skill-pill">React / Next.js</span>
+                        <span class="skill-pill">GSAP / Lenis</span>
+                        <span class="skill-pill">HTML5 / CSS3</span>
+                        <span class="skill-pill">TailwindCSS</span>
+                    </div>
+                </div>
+
+                <div class="skill-category glass-panel">
+                    <div class="category-header">
+                        <i data-lucide="server" style="color: var(--accent-green);"></i>
+                        <h3>Backend & Workflow</h3>
+                    </div>
+                    <div class="skill-tags">
+                        <span class="skill-pill">n8n Automation</span>
+                        <span class="skill-pill">HubSpot CRM</span>
+                        <span class="skill-pill">Node.js</span>
+                        <span class="skill-pill">PHP / MySQL</span>
+                        <span class="skill-pill">REST APIs & Webhooks</span>
+                        <span class="skill-pill">Python</span>
+                    </div>
+                </div>
+
+                <div class="skill-category glass-panel">
+                    <div class="category-header">
+                        <i data-lucide="cpu" style="color: var(--accent-purple);"></i>
+                        <h3>Tools & Architecture</h3>
+                    </div>
+                    <div class="skill-tags">
+                        <span class="skill-pill">Git / GitHub</span>
+                        <span class="skill-pill">Vite / Webpack</span>
+                        <span class="skill-pill">VS Code</span>
+                        <span class="skill-pill">Figma / UI Design</span>
+                        <span class="skill-pill">Vercel</span>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- SECTION 05: EXPERIENCE & JOURNEY -->
+        <section id="experience" class="section">
+            <div class="section-meta">05 / TIMELINE</div>
+            <h2 class="section-title">CAREER & EDUCATION</h2>
+
+            <div class="journey-layout">
+                <div class="journey-column glass-panel">
+                    <h3 class="journey-title"><i data-lucide="briefcase" style="color: var(--accent-cyan);"></i> Work Experience</h3>
+                    <div class="timeline">
+                        <div class="timeline-item">
+                            <div class="timeline-dot"></div>
+                            <div class="timeline-meta">JUN 2026 — PRESENT</div>
+                            <div class="timeline-role">RevOps & Automation Intern</div>
+                            <div class="timeline-place">Growthspree</div>
+                            <p class="timeline-desc">
+                                Engineered scalable HubSpot automations, streamlined inbound lead qualification workflows, and developed multi-channel data integration pipelines.
+                            </p>
+                        </div>
+                        <div class="timeline-item">
+                            <div class="timeline-dot"></div>
+                            <div class="timeline-meta">2025 — 2026</div>
+                            <div class="timeline-role">Freelance Web Developer</div>
+                            <div class="timeline-place">Self-Employed</div>
+                            <p class="timeline-desc">
+                                Designed and delivered client platforms including CollegesPathshala, Vacation Visits, and Saga Holidays with glassmorphic UI and form automations.
+                            </p>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="journey-column glass-panel">
+                    <h3 class="journey-title"><i data-lucide="graduation-cap" style="color: var(--accent-green);"></i> Education</h3>
+                    <div class="timeline">
+                        <div class="timeline-item">
+                            <div class="timeline-dot"></div>
+                            <div class="timeline-meta">2024 — PRESENT</div>
+                            <div class="timeline-role">Bachelor of Computer Applications (BCA)</div>
+                            <div class="timeline-place">MERI CET / University</div>
+                            <p class="timeline-desc">
+                                Deepening foundations in data structures, web technologies, software engineering methodologies, and database architecture.
+                            </p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- SECTION 06: CONTACT -->
+        <section id="contact" class="section">
+            <div class="section-meta">06 / GET IN TOUCH</div>
+            <h2 class="section-title">LET'S BUILD SOMETHING GREAT</h2>
+
+            <div class="contact-grid">
+                <div class="contact-card glass-panel">
+                    <p style="font-size: 1.05rem; color: var(--text-muted); line-height: 1.7; margin-bottom: 24px;">
+                        Whether you need a high-converting web platform, custom 3D web experience, or business automation workflows, I'm ready to collaborate.
+                    </p>
+
+                    <div class="contact-info-list">
+                        <div class="contact-info-item">
+                            <i data-lucide="mail" style="color: var(--accent-cyan);"></i>
+                            <div>
+                                <div class="contact-info-label">EMAIL</div>
+                                <a href="mailto:shivamgrover.dev@gmail.com" class="contact-info-val">shivamgrover.dev@gmail.com</a>
+                            </div>
+                        </div>
+                        <div class="contact-info-item">
+                            <i data-lucide="map-pin" style="color: var(--accent-green);"></i>
+                            <div>
+                                <div class="contact-info-label">LOCATION</div>
+                                <div class="contact-info-val">New Delhi, India</div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <button id="open-contact-modal-btn" class="btn-primary" style="margin-top: 16px;">
+                        START A CONVERSATION <i data-lucide="send" style="width: 16px; height: 16px;"></i>
+                    </button>
+                </div>
+
+                <div class="envelope-3d-card glass-panel">
+                    <div class="floating-plane-anim">✉️ ✈️</div>
+                    <h3 style="font-family: var(--font-heading); font-size: 1.4rem; color: #fff; margin-bottom: 12px;">
+                        Direct Channels
+                    </h3>
+                    <p style="font-size: 0.9rem; color: var(--primary-light); margin-bottom: 20px;">
+                        Connect directly on professional networks or drop an email.
+                    </p>
+                    <div style="display: flex; justify-content: center; gap: 14px; flex-wrap: wrap;">
+                        <a href="https://www.linkedin.com/in/shivamgrover-dev/" target="_blank" rel="noopener" class="btn-primary">
+                            <i data-lucide="linkedin" style="width: 16px; height: 16px;"></i> LinkedIn
+                        </a>
+                        <a href="https://github.com/ShivamGrover-05" target="_blank" rel="noopener" class="btn-ghost">
+                            <i data-lucide="github" style="width: 16px; height: 16px;"></i> GitHub
+                        </a>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+    </main>
+
+    <!-- Lo-Fi Ambient Audio Widget (Bottom Right) -->
+    <div id="audio-widget" class="audio-visualizer-widget" title="Click to play/pause ambient studio Lo-Fi">
+        <div class="eq-bars">
+            <div class="eq-bar" id="eq1"></div>
+            <div class="eq-bar" id="eq2"></div>
+            <div class="eq-bar" id="eq3"></div>
+            <div class="eq-bar" id="eq4"></div>
+            <div class="eq-bar" id="eq5"></div>
+        </div>
+        <div class="audio-label">
+            NOW PLAYING: <span class="track-name">lofi • deep focus</span>
+        </div>
+        <i data-lucide="volume-2" id="volume-icon" style="width: 16px; height: 16px; color: var(--accent-cyan);"></i>
+    </div>
+
+    <!-- Contact Modal -->
+    <div id="contact-modal" class="modal-overlay">
+        <div class="modal-content">
+            <button id="close-modal-btn" class="modal-close">&times;</button>
+            <h3 style="font-family: var(--font-heading); font-size: 1.5rem; margin-bottom: 8px; color: #fff;">
+                Start a Conversation
+            </h3>
+            <p style="font-size: 0.85rem; color: var(--text-muted); margin-bottom: 20px;">
+                Fill in the details below and I'll get back to you promptly.
+            </p>
+            <form id="contact-form">
+                <div class="form-group">
+                    <label for="form-name">YOUR NAME</label>
+                    <input type="text" id="form-name" required placeholder="e.g. Alex Morgan">
+                </div>
+                <div class="form-group">
+                    <label for="form-email">EMAIL ADDRESS</label>
+                    <input type="email" id="form-email" required placeholder="alex@company.com">
+                </div>
+                <div class="form-group">
+                    <label for="form-message">PROJECT DETAILS OR INQUIRY</label>
+                    <textarea id="form-message" rows="4" required placeholder="Tell me about your project goals or questions..."></textarea>
+                </div>
+                <button type="submit" class="btn-primary" style="width: 100%; justify-content: center;">
+                    SEND MESSAGE <i data-lucide="send" style="width: 16px; height: 16px;"></i>
+                </button>
+            </form>
+            <div id="form-success-msg" style="display: none; text-align: center; color: var(--accent-green); margin-top: 16px; font-family: var(--font-mono); font-size: 0.85rem;">
+                ✓ Message received! Opening your mail client...
+            </div>
+        </div>
+    </div>
+
+    <!-- Footer -->
+    <footer class="footer">
+        <div>
+            SHIVAM.DEV © 2026 Shivam Grover. All rights reserved.
+        </div>
+        <div>
+            DESIGNED & BUILT WITH 💜 PASSION
+        </div>
+        <nav class="footer-nav">
+            <a href="#home">HOME</a>
+            <a href="#about">ABOUT</a>
+            <a href="#projects">PROJECTS</a>
+            <a href="#skills">SKILLS</a>
+            <a href="#experience">EXPERIENCE</a>
+            <a href="#contact">CONTACT</a>
+        </nav>
+        <a href="#home" class="back-to-top" title="Back to top">
+            <i data-lucide="arrow-up" style="width: 18px; height: 18px;"></i>
+        </a>
+    </footer>
+
+    <!-- Scripts -->
+    <script src="projectsData.js"></script>
+    <script src="audio.js"></script>
+    <script src="scene3d.js"></script>
+    <script src="virtualOS.js"></script>
+    <script src="main.js"></script>
+    <script>
+        lucide.createIcons();
+    </script>
+</body>
+</html>
