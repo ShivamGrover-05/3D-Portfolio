@@ -411,12 +411,42 @@ document.addEventListener('DOMContentLoaded', () => {
         audioWidget.addEventListener('click', toggleAudio);
     }
 
-    // 9. Contact Modal
+    // 9. Contact Modal & Inline Conversation Form
     const contactModal = document.getElementById('contact-modal');
     const openModalBtns = document.querySelectorAll('#open-contact-modal-btn, .open-contact-trigger, .nav-actions a[href="#contact"]');
     const closeModalBtn = document.getElementById('close-modal-btn');
     const contactForm = document.getElementById('contact-form');
     const formSuccessMsg = document.getElementById('form-success-msg');
+    const inlineForm = document.getElementById('inline-contact-form');
+    const inlineSuccessMsg = document.getElementById('inline-form-success');
+
+    const handleFormSubmission = (name, email, message, successEl, resetFormCallback) => {
+        triggerHaptic('action');
+        if (successEl) {
+            successEl.style.display = 'block';
+        }
+
+        const subject = encodeURIComponent(`Collaboration Inquiry from ${name}`);
+        const body = encodeURIComponent(`Name: ${name}\nEmail: ${email}\n\nMessage:\n${message}`);
+
+        setTimeout(() => {
+            window.location.href = `mailto:shivamgrover.dev@gmail.com?subject=${subject}&body=${body}`;
+            setTimeout(() => {
+                if (resetFormCallback) resetFormCallback();
+                if (successEl) successEl.style.display = 'none';
+            }, 1200);
+        }, 600);
+    };
+
+    if (inlineForm) {
+        inlineForm.addEventListener('submit', (e) => {
+            e.preventDefault();
+            const name = document.getElementById('inline-form-name').value;
+            const email = document.getElementById('inline-form-email').value;
+            const message = document.getElementById('inline-form-message').value;
+            handleFormSubmission(name, email, message, inlineSuccessMsg, () => inlineForm.reset());
+        });
+    }
 
     const openModal = (e) => {
         if (e) e.preventDefault();
@@ -441,26 +471,13 @@ document.addEventListener('DOMContentLoaded', () => {
     if (contactForm) {
         contactForm.addEventListener('submit', (e) => {
             e.preventDefault();
-            triggerHaptic('action');
             const name = document.getElementById('form-name').value;
             const email = document.getElementById('form-email').value;
             const message = document.getElementById('form-message').value;
-
-            if (formSuccessMsg) {
-                formSuccessMsg.style.display = 'block';
-            }
-
-            const subject = encodeURIComponent(`Collaboration Inquiry from ${name}`);
-            const body = encodeURIComponent(`Name: ${name}\nEmail: ${email}\n\nMessage:\n${message}`);
-
-            setTimeout(() => {
-                window.location.href = `mailto:shivamgrover.dev@gmail.com?subject=${subject}&body=${body}`;
-                setTimeout(() => {
-                    closeModal();
-                    contactForm.reset();
-                    if (formSuccessMsg) formSuccessMsg.style.display = 'none';
-                }, 1200);
-            }, 600);
+            handleFormSubmission(name, email, message, formSuccessMsg, () => {
+                closeModal();
+                contactForm.reset();
+            });
         });
     }
 

@@ -389,22 +389,6 @@
                         <img src="assets/covers/aevonix.jpg" id="project-cover-img" alt="Project Cover" class="cover-img">
                         <div class="cover-hotspot-tag" id="project-hotspot-name">AEVONIX</div>
                     </div>
-
-                    <!-- Numbered Project Switcher Navigation -->
-                    <div class="numbered-switcher">
-                        <button class="nav-arrow-btn" id="project-prev-btn" title="Previous Project">
-                            <i data-lucide="chevron-left"></i>
-                        </button>
-                        <button class="switcher-num-btn active" data-index="0">01</button>
-                        <button class="switcher-num-btn" data-index="1">02</button>
-                        <button class="switcher-num-btn" data-index="2">03</button>
-                        <button class="switcher-num-btn" data-index="3">04</button>
-                        <button class="switcher-num-btn" data-index="4">05</button>
-                        <button class="switcher-num-btn" data-index="5">06</button>
-                        <button class="nav-arrow-btn" id="project-next-btn" title="Next Project">
-                            <i data-lucide="chevron-right"></i>
-                        </button>
-                    </div>
                 </div>
 
                 <!-- Right Column: Project Details & Technical Specs -->
@@ -450,6 +434,24 @@
                     </div>
                 </div>
 
+            </div>
+
+            <!-- Standalone Numbered Project Switcher Bar -->
+            <div class="exhibition-bottom-nav">
+                <button class="nav-arrow-btn" id="project-prev-btn" title="Previous Project">
+                    <i data-lucide="chevron-left" style="width: 16px; height: 16px;"></i> PREV
+                </button>
+                <div class="numbered-switcher">
+                    <button class="switcher-num-btn active" data-index="0">01</button>
+                    <button class="switcher-num-btn" data-index="1">02</button>
+                    <button class="switcher-num-btn" data-index="2">03</button>
+                    <button class="switcher-num-btn" data-index="3">04</button>
+                    <button class="switcher-num-btn" data-index="4">05</button>
+                    <button class="switcher-num-btn" data-index="5">06</button>
+                </div>
+                <button class="nav-arrow-btn" id="project-next-btn" title="Next Project">
+                    NEXT <i data-lucide="chevron-right" style="width: 16px; height: 16px;"></i>
+                </button>
             </div>
         </section>
 
@@ -559,12 +561,48 @@
             <h2 class="section-title">LET'S BUILD SOMETHING GREAT</h2>
 
             <div class="contact-grid">
-                <div class="contact-card glass-panel">
-                    <p style="font-size: 1.05rem; color: var(--text-muted); line-height: 1.7; margin-bottom: 24px;">
-                        Whether you need a high-converting web platform, custom 3D web experience, or business automation workflows, I'm ready to collaborate.
+                <!-- Direct Inline Contact Form -->
+                <div class="contact-card glass-panel interactive-contact-card">
+                    <h3 style="font-family: var(--font-heading); font-size: 1.5rem; color: #fff; margin-bottom: 8px;">
+                        Start a Conversation
+                    </h3>
+                    <p style="font-size: 0.9rem; color: var(--text-muted); line-height: 1.6; margin-bottom: 20px;">
+                        Have a project in mind, need a full-stack developer, or looking for workflow automation? Let's talk!
                     </p>
 
-                    <div class="contact-info-list">
+                    <form id="inline-contact-form" class="inline-form-body">
+                        <div class="form-group">
+                            <label for="inline-form-name">YOUR NAME</label>
+                            <input type="text" id="inline-form-name" required placeholder="e.g. Alex Morgan">
+                        </div>
+                        <div class="form-group">
+                            <label for="inline-form-email">EMAIL ADDRESS</label>
+                            <input type="email" id="inline-form-email" required placeholder="alex@company.com">
+                        </div>
+                        <div class="form-group">
+                            <label for="inline-form-message">MESSAGE OR PROJECT DETAILS</label>
+                            <textarea id="inline-form-message" rows="3" required placeholder="Tell me about your goals or inquiry..."></textarea>
+                        </div>
+                        <button type="submit" class="btn-primary" style="width: 100%; justify-content: center; min-height: 48px;">
+                            SEND MESSAGE <i data-lucide="send" style="width: 16px; height: 16px;"></i>
+                        </button>
+                    </form>
+                    <div id="inline-form-success" style="display: none; text-align: center; color: var(--accent-green); margin-top: 14px; font-family: var(--font-mono); font-size: 0.85rem;">
+                        ✓ Message prepared! Launching your email client...
+                    </div>
+                </div>
+
+                <!-- Direct Channels & Floating Card -->
+                <div class="envelope-3d-card glass-panel">
+                    <div class="floating-plane-anim">✉️ ✈️</div>
+                    <h3 style="font-family: var(--font-heading); font-size: 1.4rem; color: #fff; margin-bottom: 12px;">
+                        Direct Channels
+                    </h3>
+                    <p style="font-size: 0.9rem; color: var(--primary-light); margin-bottom: 20px;">
+                        Prefer direct communication? Connect instantly on LinkedIn or send an email directly.
+                    </p>
+
+                    <div class="contact-info-list" style="margin-bottom: 24px;">
                         <div class="contact-info-item">
                             <i data-lucide="mail" style="color: var(--accent-cyan);"></i>
                             <div>
@@ -581,19 +619,6 @@
                         </div>
                     </div>
 
-                    <button id="open-contact-modal-btn" class="btn-primary" style="margin-top: 16px;">
-                        START A CONVERSATION <i data-lucide="send" style="width: 16px; height: 16px;"></i>
-                    </button>
-                </div>
-
-                <div class="envelope-3d-card glass-panel">
-                    <div class="floating-plane-anim">✉️ ✈️</div>
-                    <h3 style="font-family: var(--font-heading); font-size: 1.4rem; color: #fff; margin-bottom: 12px;">
-                        Direct Channels
-                    </h3>
-                    <p style="font-size: 0.9rem; color: var(--primary-light); margin-bottom: 20px;">
-                        Connect directly on professional networks or drop an email.
-                    </p>
                     <div style="display: flex; justify-content: center; gap: 14px; flex-wrap: wrap;">
                         <a href="https://www.linkedin.com/in/shivamgrover-dev/" target="_blank" rel="noopener" class="btn-primary">
                             <i data-lucide="linkedin" style="width: 16px; height: 16px;"></i> LinkedIn
