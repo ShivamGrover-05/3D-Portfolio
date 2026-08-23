@@ -38,6 +38,30 @@ class StudioScene {
             downgradeCooldown: 0
         };
 
+        // Dedicated 3D Desk Interaction & Pointer/Touch Tracking
+        this.deskRotation = {
+            currentX: 0,
+            currentY: 0,
+            targetX: 0,
+            targetY: 0,
+            minX: -0.32,  // Controlled vertical tilt limit (~ -18 deg)
+            maxX: 0.32,   // Controlled vertical tilt limit (~ +18 deg)
+            minY: -0.75,  // Controlled horizontal rotation limit (~ -43 deg)
+            maxY: 0.75    // Controlled horizontal rotation limit (~ +43 deg)
+        };
+
+        this.pointerState = {
+            isDown: false,
+            pointerId: null,
+            startX: 0,
+            startY: 0,
+            lastX: 0,
+            lastY: 0,
+            mode: 'IDLE', // 'IDLE', 'DECIDING', '3D_DRAG', 'PAGE_SCROLL'
+            pointerType: 'mouse',
+            hasMoved: false
+        };
+
         // Raycasting & Hotspots
         this.raycaster = new THREE.Raycaster();
         this.mouseVector = new THREE.Vector2();
@@ -213,12 +237,11 @@ class StudioScene {
                 this.setupDustParticles();
             }
 
+            // Stage 6: Interactive Pointer, Cursor Parallax & Mobile Gesture Subsystem
+            this.setupPointerInteractions();
+
             // Event Listeners
             window.addEventListener('resize', this.onWindowResize.bind(this), { passive: true });
-            if (!this.deviceProfile.isTouch) {
-                window.addEventListener('mousemove', this.onMouseMove.bind(this), { passive: true });
-            }
-            this.renderer.domElement.addEventListener('click', this.onCanvasClick.bind(this));
 
             this.animate();
         } catch (err) {
@@ -647,62 +670,176 @@ class StudioScene {
         this.dismissLoadingScreen();
     }
 
-    onMouseMove(e) {
-        this.mouse.targetX = (e.clientX / window.innerWidth - 0.5) * 2;
-        this.mouse.targetY = -(e.clientY / window.innerHeight - 0.5) * 2;
+    setupPointerInteractions() {
+        const resetBtn = document.getElementById('reset-desk-view-btn');
+        const hintPill = document.getElementById('drag-hint-pill');
 
-        this.mouseVector.x = (e.clientX / window.innerWidth) * 2 - 1;
-        this.mouseVector.y = -(e.clientY / window.innerHeight) * 2 + 1;
+        if (localStorage.getItem('portfolio_3d_hint_seen') === 'true' && hintPill) {
+            hintPill.style.display = 'none';
+        } else if (hintPill) {
+            setTimeout(() => {
+                if (hintPill) hintPill.classList.add('fade-out');
+            }, 5500);
+        }
 
-        const now = performance.now();
-        if (this.lastRaycast && (now - this.lastRaycast < 40)) return;
-        this.lastRaycast = now;
+        const isInteractiveElement = (target) => {
+            if (!target) return false;
+            return target.closest('a, button, input, textarea, select, label, form, .navbar, .os-window, .os-taskbar, .os-desktop-shortcut, .btn-primary, .btn-ghost, .preview-thumb, .switcher-btn, .mini-music-pill, .expanded-music-card, .audio-dock, .project-card, .interactive-terminal, .project-actions, .nav-btn, .filter-chip');
+        };
 
-        if (this.hotspots.length > 0 && this.camera) {
-            this.raycaster.setFromCamera(this.mouseVector, this.camera);
-            const intersects = this.raycaster.intersectObjects(this.hotspots);
+        const onPointerDown = (e) => {
+            if (isInteractiveElement(e.target)) return;
 
-            if (intersects.length > 0) {
-                const hit = intersects[0].object;
-                if (this.hoveredHotspot !== hit) {
-                    this.hoveredHotspot = hit;
-                    document.body.style.cursor = 'pointer';
-                    if (hit.userData.ring) {
-                        hit.userData.ring.material.color.setHex(0x00ff9d);
-                        hit.userData.ring.scale.set(1.3, 1.3, 1.3);
+            this.pointerState.isDown = true;
+            this.pointerState.pointerId = e.pointerId;
+            this.pointerState.startX = e.clientX;
+            this.pointerState.startY = e.clientY;
+            this.pointerState.lastX = e.clientX;
+            this.pointerState.lastY = e.clientY;
+            this.pointerState.hasMoved = false;
+            this.pointerState.pointerType = e.pointerType || (this.deviceProfile.isTouch ? 'touch' : 'mouse');
+            this.pointerState.mode = this.pointerState.pointerType === 'touch' ? 'DECIDING' : '3D_DRAG';
+
+            if (this.pointerState.pointerType !== 'touch') {
+                document.body.style.cursor = 'grabbing';
+            }
+        };
+
+        const onPointerMove = (e) => {
+            // Cursor Parallax Coordinates
+            this.mouse.targetX = (e.clientX / window.innerWidth - 0.5) * 2;
+            this.mouse.targetY = -(e.clientY / window.innerHeight - 0.5) * 2;
+
+            this.mouseVector.x = (e.clientX / window.innerWidth) * 2 - 1;
+            this.mouseVector.y = -(e.clientY / window.innerHeight) * 2 + 1;
+
+            // Hotspot Raycast Hover Detection on Desktop
+            if (!this.pointerState.isDown && this.hotspots.length > 0 && this.camera && !this.deviceProfile.isTouch) {
+                const now = performance.now();
+                if (!this.lastRaycast || (now - this.lastRaycast >= 45)) {
+                    this.lastRaycast = now;
+                    this.raycaster.setFromCamera(this.mouseVector, this.camera);
+                    const intersects = this.raycaster.intersectObjects(this.hotspots);
+
+                    if (intersects.length > 0) {
+                        const hit = intersects[0].object;
+                        if (this.hoveredHotspot !== hit) {
+                            this.hoveredHotspot = hit;
+                            document.body.style.cursor = 'pointer';
+                            if (hit.userData.ring) {
+                                hit.userData.ring.material.color.setHex(0x00ff9d);
+                                hit.userData.ring.scale.set(1.3, 1.3, 1.3);
+                            }
+                            if (window.triggerHaptic) window.triggerHaptic('hotspot');
+                        }
+                    } else if (this.hoveredHotspot) {
+                        if (this.hoveredHotspot.userData.ring) {
+                            this.hoveredHotspot.userData.ring.material.color.setHex(0x00f3ff);
+                            this.hoveredHotspot.userData.ring.scale.set(1, 1, 1);
+                        }
+                        this.hoveredHotspot = null;
+                        document.body.style.cursor = 'default';
                     }
-                    if (window.triggerHaptic) window.triggerHaptic('hotspot');
-                }
-            } else {
-                if (this.hoveredHotspot) {
-                    if (this.hoveredHotspot.userData.ring) {
-                        this.hoveredHotspot.userData.ring.material.color.setHex(0x00f3ff);
-                        this.hoveredHotspot.userData.ring.scale.set(1, 1, 1);
-                    }
-                    this.hoveredHotspot = null;
-                    document.body.style.cursor = 'default';
                 }
             }
+
+            if (!this.pointerState.isDown) return;
+
+            const deltaX = e.clientX - this.pointerState.startX;
+            const deltaY = e.clientY - this.pointerState.startY;
+
+            // Gesture Arbitration for Touch on Mobile
+            if (this.pointerState.mode === 'DECIDING') {
+                const dist = Math.hypot(deltaX, deltaY);
+                if (dist > 9) {
+                    if (Math.abs(deltaX) > Math.abs(deltaY) * 1.15) {
+                        this.pointerState.mode = '3D_DRAG';
+                        if (window.triggerHaptic) window.triggerHaptic('desk');
+                        if (hintPill) hintPill.classList.add('fade-out');
+                        localStorage.setItem('portfolio_3d_hint_seen', 'true');
+                    } else {
+                        this.pointerState.mode = 'PAGE_SCROLL';
+                    }
+                }
+            }
+
+            // 3D Desk Drag Rotation
+            if (this.pointerState.mode === '3D_DRAG') {
+                const dx = e.clientX - this.pointerState.lastX;
+                const dy = e.clientY - this.pointerState.lastY;
+
+                if (Math.hypot(dx, dy) > 2) {
+                    this.pointerState.hasMoved = true;
+                }
+
+                const sensX = this.pointerState.pointerType === 'touch' ? 0.007 : 0.005;
+                const sensY = this.pointerState.pointerType === 'touch' ? 0.004 : 0.003;
+
+                this.deskRotation.targetY = Math.max(
+                    this.deskRotation.minY,
+                    Math.min(this.deskRotation.maxY, this.deskRotation.targetY + dx * sensX)
+                );
+                this.deskRotation.targetX = Math.max(
+                    this.deskRotation.minX,
+                    Math.min(this.deskRotation.maxX, this.deskRotation.targetX + dy * sensY)
+                );
+
+                if (resetBtn && (Math.abs(this.deskRotation.targetY) > 0.04 || Math.abs(this.deskRotation.targetX) > 0.04)) {
+                    resetBtn.classList.add('visible');
+                }
+
+                if (hintPill && !hintPill.classList.contains('fade-out')) {
+                    hintPill.classList.add('fade-out');
+                    localStorage.setItem('portfolio_3d_hint_seen', 'true');
+                }
+            }
+
+            this.pointerState.lastX = e.clientX;
+            this.pointerState.lastY = e.clientY;
+        };
+
+        const onPointerUp = (e) => {
+            if (!this.pointerState.isDown) return;
+
+            if (!this.pointerState.hasMoved && !isInteractiveElement(e.target)) {
+                this.handleRaycastClick(e);
+            }
+
+            this.pointerState.isDown = false;
+            this.pointerState.mode = 'IDLE';
+
+            if (this.pointerState.pointerType !== 'touch') {
+                document.body.style.cursor = 'default';
+            }
+        };
+
+        window.addEventListener('pointerdown', onPointerDown, { passive: true });
+        window.addEventListener('pointermove', onPointerMove, { passive: true });
+        window.addEventListener('pointerup', onPointerUp, { passive: true });
+        window.addEventListener('pointercancel', onPointerUp, { passive: true });
+
+        if (resetBtn) {
+            resetBtn.addEventListener('click', (e) => {
+                e.stopPropagation();
+                this.resetDeskView();
+            });
         }
     }
 
-    onCanvasClick(e) {
-        if (!this.camera) return;
+    handleRaycastClick(e) {
+        if (!this.camera || this.hotspots.length === 0) return;
 
-        if (this.deviceProfile.isTouch) {
-            const rect = this.renderer.domElement.getBoundingClientRect();
-            this.mouseVector.x = ((e.clientX - rect.left) / rect.width) * 2 - 1;
-            this.mouseVector.y = -((e.clientY - rect.top) / rect.height) * 2 + 1;
-            this.raycaster.setFromCamera(this.mouseVector, this.camera);
-            const intersects = this.raycaster.intersectObjects(this.hotspots);
-            if (intersects.length > 0) {
-                this.hoveredHotspot = intersects[0].object;
-            }
-        }
+        this.mouseVector.x = (e.clientX / window.innerWidth) * 2 - 1;
+        this.mouseVector.y = -(e.clientY / window.innerHeight) * 2 + 1;
+        this.raycaster.setFromCamera(this.mouseVector, this.camera);
+        const intersects = this.raycaster.intersectObjects(this.hotspots);
 
-        if (this.hoveredHotspot) {
-            const hotspotId = this.hoveredHotspot.userData.hotspotId;
-            const pId = this.hoveredHotspot.userData.projectId;
+        if (intersects.length > 0) {
+            const hit = intersects[0].object;
+            const hotspotId = hit.userData.hotspotId;
+            const pId = hit.userData.projectId;
+
+            if (window.triggerHaptic) window.triggerHaptic('hotspot');
 
             if (hotspotId === 'monitor') {
                 if (window.virtualOS) {
@@ -792,13 +929,29 @@ class StudioScene {
         if (window.triggerHaptic) window.triggerHaptic('reset');
         const p = this.getCameraPreset(this.currentSection);
         
-        if (window.gsap && this.camera && this.controls) {
-            window.gsap.to(this.camera.position, { x: p.x, y: p.y, z: p.z, duration: 0.9, ease: "power2.out" });
-            window.gsap.to(this.controls.target, { x: p.targetX, y: p.targetY, z: p.targetZ, duration: 0.9, ease: "power2.out" });
+        this.deskRotation.targetX = 0;
+        this.deskRotation.targetY = 0;
+
+        if (window.gsap) {
+            if (this.camera && this.controls) {
+                window.gsap.to(this.camera.position, { x: p.x, y: p.y, z: p.z, duration: 0.85, ease: "power2.out" });
+                window.gsap.to(this.controls.target, { x: p.targetX, y: p.targetY, z: p.targetZ, duration: 0.85, ease: "power2.out" });
+            }
+            window.gsap.to(this.deskRotation, { currentX: 0, currentY: 0, duration: 0.85, ease: "power2.out" });
+        } else {
+            this.deskRotation.currentX = 0;
+            this.deskRotation.currentY = 0;
+            if (this.camera && this.controls) {
+                this.camera.position.set(p.x, p.y, p.z);
+                this.controls.target.set(p.targetX, p.targetY, p.targetZ);
+            }
         }
 
         const resetBtn = document.getElementById('reset-desk-view-btn');
-        if (resetBtn) resetBtn.style.opacity = '0';
+        if (resetBtn) {
+            resetBtn.classList.remove('visible');
+            resetBtn.style.opacity = '0';
+        }
     }
 
     onWindowResize() {
@@ -927,9 +1080,22 @@ class StudioScene {
         const delta = this.clock.getDelta();
         const elapsedTime = this.clock.getElapsedTime();
 
+        // Cursor Parallax Smoothing for Desktop
         if (!this.deviceProfile.isTouch) {
-            this.mouse.x += (this.mouse.targetX - this.mouse.x) * 0.04;
-            this.mouse.y += (this.mouse.targetY - this.mouse.y) * 0.04;
+            this.mouse.x += (this.mouse.targetX - this.mouse.x) * 0.05;
+            this.mouse.y += (this.mouse.targetY - this.mouse.y) * 0.05;
+        }
+
+        // Frame-Rate Independent Smooth Desk Rotation & Parallax Blending
+        if (this.model) {
+            const parallaxX = this.deviceProfile.isTouch ? 0 : this.mouse.x * 0.12;
+            const parallaxY = this.deviceProfile.isTouch ? 0 : this.mouse.y * 0.06;
+
+            this.deskRotation.currentY += (this.deskRotation.targetY + parallaxX - this.deskRotation.currentY) * 0.08;
+            this.deskRotation.currentX += (this.deskRotation.targetX - parallaxY - this.deskRotation.currentX) * 0.08;
+
+            this.model.rotation.y = this.deskRotation.currentY;
+            this.model.rotation.x = this.deskRotation.currentX;
         }
 
         if (this.controls && this.controls.enabled) {
