@@ -87,8 +87,40 @@
             <a href="#contact" class="btn-primary">
                 LET'S CONNECT <i data-lucide="arrow-right" style="width: 16px; height: 16px;"></i>
             </a>
+            <!-- Mobile Menu Toggle Button -->
+            <button id="mobile-menu-btn" class="mobile-menu-toggle" aria-label="Toggle Navigation Menu">
+                <i data-lucide="menu" id="mobile-menu-icon" style="width: 20px; height: 20px;"></i>
+            </button>
         </div>
     </header>
+
+    <!-- Mobile Navigation Drawer -->
+    <div id="mobile-nav-drawer" class="mobile-nav-menu">
+        <div class="mobile-nav-header">
+            <span class="mobile-nav-brand">SHIVAM<span class="dot">.DEV</span></span>
+            <button id="close-mobile-nav-btn" class="mobile-nav-close" aria-label="Close Navigation">
+                <i data-lucide="x" style="width: 20px; height: 20px;"></i>
+            </button>
+        </div>
+        <ul class="mobile-nav-list">
+            <li><a href="#home" class="mobile-nav-link" data-section="home"><span class="num">01</span> HOME</a></li>
+            <li><a href="#about" class="mobile-nav-link" data-section="about"><span class="num">02</span> ABOUT ME</a></li>
+            <li><a href="#projects" class="mobile-nav-link" data-section="projects"><span class="num">03</span> PROJECTS</a></li>
+            <li><a href="#skills" class="mobile-nav-link" data-section="skills"><span class="num">04</span> SKILLS & TECH</a></li>
+            <li><a href="#experience" class="mobile-nav-link" data-section="experience"><span class="num">05</span> EXPERIENCE</a></li>
+            <li><a href="#contact" class="mobile-nav-link" data-section="contact"><span class="num">06</span> CONTACT</a></li>
+        </ul>
+        <div class="mobile-nav-footer">
+            <button class="btn-primary enter-studio-trigger" style="width: 100%; justify-content: center; margin-bottom: 12px;">
+                ENTER STUDIO / OS <i data-lucide="monitor" style="width: 16px; height: 16px;"></i>
+            </button>
+            <div style="display: flex; justify-content: center; gap: 12px;">
+                <a href="https://github.com/ShivamGrover-05" target="_blank" rel="noopener" class="social-icon"><i data-lucide="github"></i></a>
+                <a href="https://www.linkedin.com/in/shivamgrover-dev/" target="_blank" rel="noopener" class="social-icon"><i data-lucide="linkedin"></i></a>
+                <a href="mailto:shivamgrover.dev@gmail.com" class="social-icon"><i data-lucide="mail"></i></a>
+            </div>
+        </div>
+    </div>
 
     <!-- Interactive Virtual Computer OS Layer -->
     <div id="virtual-computer-layer" class="virtual-computer-overlay">

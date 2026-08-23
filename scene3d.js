@@ -253,16 +253,16 @@ class StudioScene {
             this.controls = new THREE.OrbitControls(this.camera, this.renderer.domElement);
             this.controls.enableDamping = true;
             this.controls.dampingFactor = 0.06;
-            this.controls.enableZoom = this.deviceProfile.isMobile ? true : false;
+            this.controls.enableZoom = !this.deviceProfile.isMobile;
             this.controls.maxPolarAngle = Math.PI / 2 + 0.05;
             this.controls.minPolarAngle = Math.PI / 6;
             this.controls.minAzimuthAngle = -Math.PI / 3;
             this.controls.maxAzimuthAngle = Math.PI / 3;
             
-            this.controls.touches = {
-                ONE: THREE.TOUCH.ROTATE,
-                TWO: THREE.TOUCH.DOLLY_PAN
-            };
+            // On desktop: full rotation with mouse. On mobile: enabled via explicit desk interaction or horizontal drags only
+            if (this.deviceProfile.isMobile) {
+                this.controls.enableRotate = false; // Prevents OrbitControls from capturing native vertical touch scroll
+            }
 
             const preset = this.getCameraPreset(this.currentSection);
             this.controls.target.set(preset.targetX, preset.targetY, preset.targetZ);

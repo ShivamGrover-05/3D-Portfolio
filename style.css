@@ -33,6 +33,8 @@ html {
     background-color: var(--bg-main);
     color: var(--text-main);
     font-family: var(--font-body);
+    touch-action: pan-y;
+    -webkit-overflow-scrolling: touch;
 }
 
 html.lenis, html.lenis body {
@@ -59,6 +61,8 @@ body {
     overflow-x: hidden;
     background-color: var(--bg-main);
     min-height: 100vh;
+    touch-action: pan-y;
+    -webkit-overflow-scrolling: touch;
 }
 
 /* Custom Scrollbar */
@@ -84,6 +88,11 @@ body {
     width: 100vw;
     height: 100vh;
     z-index: 1;
+    pointer-events: none; /* Let all native touch and scroll events pass through smoothly to the page */
+    touch-action: pan-y;
+}
+
+#webgl-container.interactive-3d-active {
     pointer-events: auto;
 }
 
@@ -91,15 +100,8 @@ body {
 #content-layer {
     position: relative;
     z-index: 10;
-    pointer-events: none;
-}
-
-#content-layer a,
-#content-layer button,
-#content-layer input,
-#content-layer textarea,
-#content-layer .interactive {
     pointer-events: auto;
+    touch-action: pan-y;
 }
 
 /* Ambient Loading Overlay */
@@ -248,9 +250,109 @@ body {
 .social-icon:hover {
     color: #fff;
     background: rgba(108, 92, 231, 0.25);
-    border-color: var(--accent-cyan);
+    border-color: var(--primary-light);
     transform: translateY(-2px);
-    box-shadow: 0 0 15px rgba(0, 243, 255, 0.3);
+}
+
+.mobile-menu-toggle {
+    display: none;
+    width: 40px;
+    height: 40px;
+    border-radius: 10px;
+    background: rgba(255, 255, 255, 0.06);
+    border: 1px solid var(--border-color);
+    align-items: center;
+    justify-content: center;
+    color: #fff;
+    cursor: pointer;
+    transition: var(--transition-smooth);
+}
+
+/* Mobile Slide-Out Menu Drawer */
+.mobile-nav-menu {
+    position: fixed;
+    top: 0;
+    right: -100%;
+    width: 280px;
+    max-width: 85vw;
+    height: 100dvh;
+    background: rgba(8, 10, 18, 0.96);
+    backdrop-filter: blur(20px);
+    border-left: 1px solid var(--border-color);
+    z-index: 999;
+    display: flex;
+    flex-direction: column;
+    justify-content: space-between;
+    padding: 24px 20px;
+    transition: right 0.35s cubic-bezier(0.16, 1, 0.3, 1);
+    box-shadow: -15px 0 40px rgba(0,0,0,0.7);
+}
+
+.mobile-nav-menu.active {
+    right: 0;
+}
+
+.mobile-nav-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding-bottom: 18px;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+.mobile-nav-brand {
+    font-family: var(--font-heading);
+    font-size: 1.2rem;
+    font-weight: 800;
+    color: #fff;
+}
+
+.mobile-nav-close {
+    background: transparent;
+    border: none;
+    color: var(--text-muted);
+    cursor: pointer;
+    padding: 4px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.mobile-nav-list {
+    list-style: none;
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+    margin: 28px 0;
+}
+
+.mobile-nav-link {
+    font-family: var(--font-mono);
+    font-size: 0.95rem;
+    font-weight: 600;
+    color: var(--text-muted);
+    text-decoration: none;
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 8px 0;
+    transition: var(--transition-smooth);
+}
+
+.mobile-nav-link .num {
+    color: var(--accent-cyan);
+    font-size: 0.8rem;
+}
+
+.mobile-nav-link:hover,
+.mobile-nav-link.active {
+    color: #fff;
+    transform: translateX(4px);
+}
+
+.mobile-nav-footer {
+    padding-top: 18px;
+    border-top: 1px solid rgba(255, 255, 255, 0.08);
 }
 
 .btn-primary {
@@ -1329,6 +1431,7 @@ body {
 @media (max-width: 1024px) {
     .navbar { padding: 16px 20px; }
     .nav-links { display: none; }
+    .mobile-menu-toggle { display: flex; }
     .hero-projects-preview { display: none; }
     .section { padding: 90px 20px 50px; }
     .about-grid, .journey-layout, .contact-grid { grid-template-columns: 1fr; }

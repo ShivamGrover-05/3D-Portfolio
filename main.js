@@ -44,14 +44,15 @@ document.addEventListener('DOMContentLoaded', () => {
 
     if (typeof Lenis !== 'undefined') {
         lenis = new Lenis({
-            duration: prefersReducedMotion ? 0 : (isTouch ? 0.9 : 1.1),
+            duration: prefersReducedMotion ? 0 : 1.1,
             easing: (t) => Math.min(1, 1.001 - Math.pow(2, -10 * t)),
             orientation: 'vertical',
             gestureOrientation: 'vertical',
             smoothWheel: true,
             wheelMultiplier: 1.0,
-            touchMultiplier: 1.2,
-            infinite: false
+            touchMultiplier: 1.0,
+            syncTouch: false, // Allows native, hardware-accelerated touch scrolling with 0ms input latency on Android
+            autoResize: true
         });
 
         window.lenis = lenis;
@@ -118,18 +119,18 @@ document.addEventListener('DOMContentLoaded', () => {
             window.gsap.to(coverImg, {
                 opacity: 0,
                 scale: 0.96,
-                duration: 0.2,
+                duration: 0.18,
                 ease: "power2.in",
                 onComplete: () => {
                     coverImg.src = p.coverImage;
-                    window.gsap.to(coverImg, { opacity: 1, scale: 1, duration: 0.35, ease: "power2.out" });
+                    window.gsap.to(coverImg, { opacity: 1, scale: 1, duration: 0.28, ease: "power2.out" });
                 }
             });
 
             if (infoContainer) {
                 window.gsap.fromTo(infoContainer, 
-                    { opacity: 0.4, y: 10 }, 
-                    { opacity: 1, y: 0, duration: 0.35, ease: "power2.out" }
+                    { opacity: 0.5, y: 8 }, 
+                    { opacity: 1, y: 0, duration: 0.28, ease: "power2.out" }
                 );
             }
         } else if (coverImg) {
@@ -169,8 +170,8 @@ document.addEventListener('DOMContentLoaded', () => {
             }
         }
 
-        // Synchronize 3D Camera with Active Project
-        if (moveCamera && window.studioScene && typeof window.studioScene.focusOnProjectObject === 'function') {
+        // Synchronize 3D Camera with Active Project (desktop only or intentional)
+        if (moveCamera && window.innerWidth >= 768 && window.studioScene && typeof window.studioScene.focusOnProjectObject === 'function') {
             window.studioScene.focusOnProjectObject(p);
         }
     };
@@ -230,24 +231,35 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     }
 
-    // 5. Touch Swipe Navigation for Exhibition Stage
+    // 5. Touch Swipe Navigation for Exhibition Stage with Strict Angle Detection (abs(deltaX) > 1.5 * abs(deltaY))
     let touchStartX = 0;
+    let touchStartY = 0;
     let touchEndX = 0;
+    let touchEndY = 0;
     const exhibitionStage = document.querySelector('.exhibition-stage');
 
     if (exhibitionStage) {
         exhibitionStage.addEventListener('touchstart', (e) => {
-            touchStartX = e.changedTouches[0].screenX;
+            if (e.touches && e.touches.length === 1) {
+                touchStartX = e.touches[0].clientX;
+                touchStartY = e.touches[0].clientY;
+            }
         }, { passive: true });
 
         exhibitionStage.addEventListener('touchend', (e) => {
-            touchEndX = e.changedTouches[0].screenX;
-            const diff = touchEndX - touchStartX;
-            if (Math.abs(diff) > 50) {
-                if (diff < 0) {
-                    updateProjectDisplay(currentProjectIndex + 1, true);
-                } else {
-                    updateProjectDisplay(currentProjectIndex - 1, true);
+            if (e.changedTouches && e.changedTouches.length === 1) {
+                touchEndX = e.changedTouches[0].clientX;
+                touchEndY = e.changedTouches[0].clientY;
+                const deltaX = touchEndX - touchStartX;
+                const deltaY = touchEndY - touchStartY;
+                
+                // Only treat as horizontal project swipe if horizontal distance is dominant (>40px AND > 1.4x vertical movement)
+                if (Math.abs(deltaX) > 40 && Math.abs(deltaX) > Math.abs(deltaY) * 1.4) {
+                    if (deltaX < 0) {
+                        updateProjectDisplay(currentProjectIndex + 1, false);
+                    } else {
+                        updateProjectDisplay(currentProjectIndex - 1, false);
+                    }
                 }
             }
         }, { passive: true });
@@ -301,7 +313,24 @@ document.addEventListener('DOMContentLoaded', () => {
         window.addEventListener('scroll', updateActiveNav, { passive: true });
     }
 
-    // Smooth Anchor Navigation
+    // Smooth Anchor Navigation & Mobile Drawer Integration
+    const mobileDrawer = document.getElementById('mobile-nav-drawer');
+    const mobileMenuBtn = document.getElementById('mobile-menu-btn');
+    const closeMobileNavBtn = document.getElementById('close-mobile-nav-btn');
+
+    const openMobileNav = () => {
+        triggerHaptic('button');
+        if (mobileDrawer) mobileDrawer.classList.add('active');
+    };
+
+    const closeMobileNav = () => {
+        triggerHaptic('button');
+        if (mobileDrawer) mobileDrawer.classList.remove('active');
+    };
+
+    if (mobileMenuBtn) mobileMenuBtn.addEventListener('click', openMobileNav);
+    if (closeMobileNavBtn) closeMobileNavBtn.addEventListener('click', closeMobileNav);
+
     document.querySelectorAll('a[href^="#"]').forEach(link => {
         link.addEventListener('click', (e) => {
             const href = link.getAttribute('href');
@@ -310,8 +339,9 @@ document.addEventListener('DOMContentLoaded', () => {
             if (targetEl) {
                 e.preventDefault();
                 triggerHaptic('button');
+                closeMobileNav();
                 if (window.lenis) {
-                    window.lenis.scrollTo(targetEl, { offset: 0, duration: 1.1 });
+                    window.lenis.scrollTo(targetEl, { offset: 0, duration: 1.0 });
                 } else {
                     targetEl.scrollIntoView({ behavior: 'smooth' });
                 }
