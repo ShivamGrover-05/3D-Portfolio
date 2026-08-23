@@ -1,4 +1,4 @@
-// 3D Scene Engine with Interactive Hotspots & Adaptive Device-Tiering Choreography
+// 3D Scene Engine with Staged Progressive Loading, Viewport-Aware Camera Framing, and Resilience
 
 class StudioScene {
     constructor() {
@@ -21,9 +21,10 @@ class StudioScene {
         this.deskLampOn = true;
         this.isContextLost = false;
         this.animFrameId = null;
+        this.isInitialized = false;
+        this.stage = 0; // 0: uninitialized, 1: shell & camera, 2: lighting & floor, 3: GLB model & screen, 4: hotspots & particles
 
-        // Performance Tier System: HIGH | MEDIUM | LOW | FALLBACK
-        this.tier = 'HIGH';
+        // Capability-Based Device Profiling
         this.deviceProfile = this.detectDeviceProfile();
         this.tier = this.determinePerformanceTier(this.deviceProfile);
         
@@ -43,17 +44,35 @@ class StudioScene {
         this.hotspots = [];
         this.hoveredHotspot = null;
 
-        // Section viewpoint presets
+        // Dedicated Viewport-Aware Camera Configurations (Desktop vs Tablet vs Mobile)
         this.cameraPositions = {
-            home: { x: 0, y: 3.2, z: 7.2, targetX: 0, targetY: 1.2, targetZ: 0 },
-            about: { x: -3.5, y: 2.8, z: 5.5, targetX: -0.5, targetY: 1.4, targetZ: 0 },
-            projects: { x: 0, y: 2.8, z: 5.2, targetX: 0, targetY: 1.4, targetZ: 0 },
-            skills: { x: 2.5, y: 4.2, z: 4.8, targetX: 0, targetY: 1.6, targetZ: -0.5 },
-            experience: { x: -2.8, y: 2.2, z: 6.0, targetX: -0.2, targetY: 1.1, targetZ: 0 },
-            contact: { x: 0, y: 2.6, z: 5.2, targetX: 0, targetY: 1.2, targetZ: 0.5 }
+            desktop: {
+                home: { x: 0, y: 3.0, z: 6.8, targetX: 0, targetY: 1.2, targetZ: 0 },
+                about: { x: -3.5, y: 2.8, z: 5.5, targetX: -0.5, targetY: 1.4, targetZ: 0 },
+                projects: { x: 0, y: 2.8, z: 5.2, targetX: 0, targetY: 1.4, targetZ: 0 },
+                skills: { x: 2.5, y: 4.2, z: 4.8, targetX: 0, targetY: 1.6, targetZ: -0.5 },
+                experience: { x: -2.8, y: 2.2, z: 6.0, targetX: -0.2, targetY: 1.1, targetZ: 0 },
+                contact: { x: 0, y: 2.6, z: 5.2, targetX: 0, targetY: 1.2, targetZ: 0.5 }
+            },
+            mobile: {
+                // Centered prominently in mobile hero viewport (no huge empty space!)
+                home: { x: 0, y: 2.4, z: 4.6, targetX: 0, targetY: 1.25, targetZ: 0 },
+                about: { x: -1.8, y: 2.2, z: 4.8, targetX: -0.3, targetY: 1.3, targetZ: 0 },
+                projects: { x: 0, y: 2.2, z: 4.5, targetX: 0, targetY: 1.3, targetZ: 0 },
+                skills: { x: 1.6, y: 2.8, z: 4.6, targetX: 0, targetY: 1.4, targetZ: -0.3 },
+                experience: { x: -1.6, y: 2.0, z: 4.9, targetX: -0.2, targetY: 1.1, targetZ: 0 },
+                contact: { x: 0, y: 2.2, z: 4.5, targetX: 0, targetY: 1.2, targetZ: 0.3 }
+            }
         };
 
-        this.init();
+        // Defer 3D setup slightly so the primary UI & Typography paint instantly without blocking CPU/GPU
+        if (typeof window !== 'undefined') {
+            if ('requestIdleCallback' in window) {
+                window.requestIdleCallback(() => this.startProgressiveInit(), { timeout: 350 });
+            } else {
+                setTimeout(() => this.startProgressiveInit(), 50);
+            }
+        }
     }
 
     detectDeviceProfile() {
@@ -61,13 +80,12 @@ class StudioScene {
         const userAgent = navigator.userAgent || '';
         const isMobileUA = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(userAgent);
         const concurrency = navigator.hardwareConcurrency || 4;
-        const memory = navigator.deviceMemory || 4; // GB (Chrome/Edge API)
+        const memory = navigator.deviceMemory || 4; // GB (Chrome/Edge)
         const dpr = window.devicePixelRatio || 1;
         const width = window.innerWidth;
         const height = window.innerHeight;
         const isSmallScreen = width < 768 || height < 500;
 
-        // WebGL Capability Probe
         let hasWebGL = false;
         let hasWebGL2 = false;
         let rendererString = '';
@@ -105,39 +123,27 @@ class StudioScene {
     }
 
     determinePerformanceTier(p) {
-        // User manual override from settings
         const userOverride = localStorage.getItem('portfolio_quality');
         if (userOverride && ['HIGH', 'MEDIUM', 'LOW', 'FALLBACK'].includes(userOverride)) {
             return userOverride;
         }
 
-        // WebGL Unsupported -> FALLBACK 2D
-        if (!p.hasWebGL) {
-            return 'FALLBACK';
-        }
+        if (!p.hasWebGL) return 'FALLBACK';
 
-        // Low-End Mobile (Snapdragon 680, low memory, budget mobile GPUs like Adreno 610/Mali-G52, <=4 cores or <=4GB RAM)
+        // Low-End Mobile (Snapdragon 680, low memory, budget mobile GPUs like Adreno 610/Mali-G52)
         const isLowGPU = /Adreno\s*(5|610|612|616)|Mali-G(51|52|57|71)|PowerVR/i.test(p.rendererString);
         if (p.isMobile && (p.memory <= 4 || p.concurrency <= 4 || isLowGPU || p.maxTextureSize <= 4096)) {
             return 'LOW';
         }
 
-        // Mid-Range Mobile / Tablets
-        if (p.isMobile) {
-            return 'MEDIUM';
-        }
-
-        // Desktop with moderate specs
-        if (p.concurrency <= 4 || p.memory <= 4) {
-            return 'MEDIUM';
-        }
-
-        // Capable Desktop / High-End
+        if (p.isMobile) return 'MEDIUM';
+        if (p.concurrency <= 4 || p.memory <= 4) return 'MEDIUM';
         return 'HIGH';
     }
 
-    init() {
-        if (!this.container) return;
+    startProgressiveInit() {
+        if (this.isInitialized || !this.container) return;
+        this.isInitialized = true;
 
         if (this.tier === 'FALLBACK') {
             this.activate2DFallback();
@@ -145,18 +151,17 @@ class StudioScene {
         }
 
         try {
+            // Stage 1: Renderer & Camera Initialization
             this.scene = new THREE.Scene();
-            this.camera = new THREE.PerspectiveCamera(45, window.innerWidth / window.innerHeight, 0.1, 100);
+            this.camera = new THREE.PerspectiveCamera(45, window.innerWidth / window.innerHeight, 0.1, 80);
 
-            // DPR Capping per Tier:
-            // HIGH: 1.0 - 1.5 | MEDIUM: 1.0 | LOW: 0.75 - 1.0
             let targetDPR = 1.0;
             if (this.tier === 'HIGH') {
                 targetDPR = Math.min(window.devicePixelRatio, 1.5);
             } else if (this.tier === 'MEDIUM') {
                 targetDPR = 1.0;
             } else {
-                targetDPR = Math.min(window.devicePixelRatio, 0.9);
+                targetDPR = Math.min(window.devicePixelRatio, 0.85); // Optimized for Snapdragon 680
             }
 
             this.renderer = new THREE.WebGLRenderer({
@@ -165,13 +170,13 @@ class StudioScene {
                 powerPreference: this.tier === 'LOW' ? "default" : "high-performance",
                 precision: this.tier === 'LOW' ? "mediump" : "highp",
                 depth: true,
-                stencil: false
+                stencil: false,
+                preserveDrawingBuffer: false
             });
 
             this.renderer.setSize(window.innerWidth, window.innerHeight);
             this.renderer.setPixelRatio(targetDPR);
             
-            // Shadows per tier
             if (this.tier === 'HIGH') {
                 this.renderer.shadowMap.enabled = true;
                 this.renderer.shadowMap.type = THREE.PCFSoftShadowMap;
@@ -187,35 +192,32 @@ class StudioScene {
             this.container.innerHTML = '';
             this.container.appendChild(this.renderer.domElement);
 
-            // Setup WebGL Context Loss Listeners
             this.setupContextLossHandling();
-
-            // Initial camera & aspect adaptation
             this.updateCameraForViewport();
-
-            // OrbitControls setup with mobile-friendly gestures
             this.setupControls();
 
-            // Scene setup
+            // Stage 2: Essential Room Environment & Basic Lighting
             this.setupLighting();
             this.setupRoomEnvironment();
+
+            // Stage 3: Neon sign & Screen Canvas
             this.setupNeonSign();
             this.setupScreenCanvas();
-            
+
+            // Stage 4: Load 3D GLB Model (Asynchronously)
+            this.loadModel();
+
+            // Stage 5: Secondary Elements (Hotspots & Particles)
+            this.setupInteractiveHotspots();
             if (this.tier !== 'LOW') {
                 this.setupDustParticles();
             }
-            
-            this.setupInteractiveHotspots();
-            this.loadModel();
 
-            // Event listeners
+            // Event Listeners
             window.addEventListener('resize', this.onWindowResize.bind(this), { passive: true });
-            
             if (!this.deviceProfile.isTouch) {
                 window.addEventListener('mousemove', this.onMouseMove.bind(this), { passive: true });
             }
-            
             this.renderer.domElement.addEventListener('click', this.onCanvasClick.bind(this));
 
             this.animate();
@@ -242,12 +244,12 @@ class StudioScene {
         canvas.addEventListener('webglcontextrestored', () => {
             console.log('WebGL context restored! Rebuilding 3D workspace...');
             this.isContextLost = false;
-            this.init();
+            this.startProgressiveInit();
         }, false);
     }
 
     setupControls() {
-        if (THREE.OrbitControls && this.renderer) {
+        if (THREE.OrbitControls && this.renderer && this.camera) {
             this.controls = new THREE.OrbitControls(this.camera, this.renderer.domElement);
             this.controls.enableDamping = true;
             this.controls.dampingFactor = 0.06;
@@ -257,16 +259,14 @@ class StudioScene {
             this.controls.minAzimuthAngle = -Math.PI / 3;
             this.controls.maxAzimuthAngle = Math.PI / 3;
             
-            // Allow natural touch scroll to pass through unless user explicitly touches canvas
             this.controls.touches = {
                 ONE: THREE.TOUCH.ROTATE,
                 TWO: THREE.TOUCH.DOLLY_PAN
             };
 
-            const p = this.cameraPositions.home;
-            this.controls.target.set(p.targetX, p.targetY, p.targetZ);
+            const preset = this.getCameraPreset(this.currentSection);
+            this.controls.target.set(preset.targetX, preset.targetY, preset.targetZ);
 
-            // Trigger subtle desk interaction haptic
             this.controls.addEventListener('start', () => {
                 if (window.triggerHaptic) window.triggerHaptic('desk');
                 const resetBtn = document.getElementById('reset-desk-view-btn');
@@ -275,23 +275,44 @@ class StudioScene {
         }
     }
 
+    getCameraPreset(sectionKey) {
+        const isMobile = window.innerWidth < 768;
+        const dict = isMobile ? this.cameraPositions.mobile : this.cameraPositions.desktop;
+        return dict[sectionKey] || dict.home;
+    }
+
     updateCameraForViewport() {
+        if (!this.camera) return;
         const aspect = window.innerWidth / window.innerHeight;
-        const p = this.cameraPositions.home;
+        const isMobile = window.innerWidth < 768;
+        const p = this.getCameraPreset(this.currentSection);
         
-        // Mobile tall screens (e.g. 19.5:9, 20:9, 21:9) need slightly more z-depth to center desk beautifully
-        if (aspect < 0.6) {
-            this.camera.position.set(p.x, p.y + 0.3, p.z + 1.8);
-            this.camera.fov = 52;
-        } else if (aspect < 1.0) {
-            this.camera.position.set(p.x, p.y + 0.2, p.z + 0.8);
-            this.camera.fov = 48;
+        // Proper Viewport-Aware Dynamic Framing (Mobile Portrait vs Landscape vs Desktop)
+        if (isMobile) {
+            if (aspect < 0.52) {
+                // Ultra-tall screens (20:9, 21:9)
+                this.camera.position.set(p.x, p.y + 0.15, p.z + 0.6);
+                this.camera.fov = 50;
+            } else if (aspect < 0.65) {
+                // Standard mobile portrait (19.5:9, 18:9)
+                this.camera.position.set(p.x, p.y, p.z);
+                this.camera.fov = 46;
+            } else {
+                // Mobile landscape or square tablet
+                this.camera.position.set(p.x, p.y - 0.1, p.z - 0.4);
+                this.camera.fov = 44;
+            }
         } else {
             this.camera.position.set(p.x, p.y, p.z);
             this.camera.fov = 45;
         }
+
         this.camera.aspect = aspect;
         this.camera.updateProjectionMatrix();
+
+        if (this.controls) {
+            this.controls.target.set(p.targetX, p.targetY, p.targetZ);
+        }
     }
 
     setupLighting() {
@@ -416,8 +437,7 @@ class StudioScene {
     renderScreenContent(time) {
         if (!this.screenContext) return;
         
-        // Throttled IDE screen redraw (12fps on High, 6fps on Low)
-        const throttleInterval = this.tier === 'LOW' ? 0.20 : 0.08;
+        const throttleInterval = this.tier === 'LOW' ? 0.25 : 0.08;
         if (this.lastScreenUpdate && (time - this.lastScreenUpdate < throttleInterval)) return;
         this.lastScreenUpdate = time;
 
@@ -514,7 +534,6 @@ class StudioScene {
             const group = new THREE.Group();
             group.position.set(cfg.pos[0], cfg.pos[1], cfg.pos[2]);
 
-            // Subtle glowing ring marker
             const ringGeo = new THREE.RingGeometry(0.08, 0.12, 24);
             const ringMat = new THREE.MeshBasicMaterial({
                 color: 0x00f3ff,
@@ -526,7 +545,6 @@ class StudioScene {
             ring.rotation.x = Math.PI / 2;
             group.add(ring);
 
-            // Bounding sphere for reliable raycast click
             const sphereGeo = new THREE.SphereGeometry(0.25, 12, 12);
             const sphereMat = new THREE.MeshBasicMaterial({
                 visible: false
@@ -542,15 +560,12 @@ class StudioScene {
 
     loadModel() {
         if (!THREE.GLTFLoader) {
-            console.warn('THREE.GLTFLoader unavailable, using procedural studio scene.');
             this.dismissLoadingScreen();
             return;
         }
 
         const loader = new THREE.GLTFLoader();
-        const loadingIndicator = document.getElementById('loading-indicator');
 
-        // Safe loader with error recovery
         loader.load(
             'Desk by dook - EtJlOllzbf.glb',
             (gltf) => {
@@ -609,10 +624,7 @@ class StudioScene {
             }
         );
 
-        // Fallback safety timer in case network stalls
-        setTimeout(() => {
-            this.dismissLoadingScreen();
-        }, 2400);
+        setTimeout(() => this.dismissLoadingScreen(), 2200);
     }
 
     dismissLoadingScreen() {
@@ -621,12 +633,11 @@ class StudioScene {
             loadingIndicator.classList.add('fade-out');
             setTimeout(() => {
                 loadingIndicator.style.display = 'none';
-            }, 500);
+            }, 400);
         }
     }
 
     activate2DFallback() {
-        console.log('Activating Premium 2D Fallback Mode');
         document.body.classList.add('fallback-2d-mode');
         const webglCont = document.getElementById('webgl-container');
         if (webglCont) webglCont.style.display = 'none';
@@ -644,7 +655,6 @@ class StudioScene {
         this.mouseVector.x = (e.clientX / window.innerWidth) * 2 - 1;
         this.mouseVector.y = -(e.clientY / window.innerHeight) * 2 + 1;
 
-        // Throttled raycasting for hover markers
         const now = performance.now();
         if (this.lastRaycast && (now - this.lastRaycast < 40)) return;
         this.lastRaycast = now;
@@ -680,7 +690,6 @@ class StudioScene {
     onCanvasClick(e) {
         if (!this.camera) return;
 
-        // On mobile tap, perform immediate raycast at tap coordinate
         if (this.deviceProfile.isTouch) {
             const rect = this.renderer.domElement.getBoundingClientRect();
             this.mouseVector.x = ((e.clientX - rect.left) / rect.width) * 2 - 1;
@@ -754,8 +763,9 @@ class StudioScene {
 
         this.controls.enabled = true;
 
-        const restorePos = this.previousCameraState ? this.previousCameraState.pos : this.cameraPositions.home;
-        const restoreTarget = this.previousCameraState ? this.previousCameraState.target : { x: 0, y: 1.2, z: 0 };
+        const preset = this.getCameraPreset(this.currentSection);
+        const restorePos = this.previousCameraState ? this.previousCameraState.pos : preset;
+        const restoreTarget = this.previousCameraState ? this.previousCameraState.target : { x: preset.targetX, y: preset.targetY, z: preset.targetZ };
         this.previousCameraState = null;
 
         if (window.gsap) {
@@ -781,7 +791,7 @@ class StudioScene {
 
     resetDeskView() {
         if (window.triggerHaptic) window.triggerHaptic('reset');
-        const p = this.cameraPositions[this.currentSection] || this.cameraPositions.home;
+        const p = this.getCameraPreset(this.currentSection);
         
         if (window.gsap && this.camera && this.controls) {
             window.gsap.to(this.camera.position, { x: p.x, y: p.y, z: p.z, duration: 0.9, ease: "power2.out" });
@@ -799,9 +809,9 @@ class StudioScene {
     }
 
     transitionToSection(sectionKey) {
-        if (!this.cameraPositions[sectionKey] || this.currentSection === sectionKey) return;
+        if (this.currentSection === sectionKey) return;
         this.currentSection = sectionKey;
-        const target = this.cameraPositions[sectionKey];
+        const target = this.getCameraPreset(sectionKey);
 
         const prefersReducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
         const duration = prefersReducedMotion ? 0.1 : 1.4;
@@ -870,7 +880,8 @@ class StudioScene {
             const fallbackBanner = document.getElementById('fallback-2d-banner');
             if (fallbackBanner) fallbackBanner.style.display = 'none';
             if (this.container) this.container.style.display = 'block';
-            this.init();
+            this.isInitialized = false;
+            this.startProgressiveInit();
         }
     }
 
@@ -879,13 +890,11 @@ class StudioScene {
         this.fpsTracker.frames++;
         this.fpsTracker.frameTimes.push(frameTime);
 
-        // Sample every 2 seconds
         if (now - this.fpsTracker.lastSampleTime >= 2000) {
             const avgFrameTime = this.fpsTracker.frameTimes.reduce((a, b) => a + b, 0) / this.fpsTracker.frameTimes.length;
             const approxFps = Math.round(1000 / avgFrameTime);
             this.fpsTracker.currentFps = approxFps;
 
-            // Downgrade hysteresis (if FPS < 25 consistently on Mobile/Mid tier)
             if (approxFps < 25 && this.fpsTracker.downgradeCooldown <= 0) {
                 this.fpsTracker.poorPerformanceCounter++;
                 if (this.fpsTracker.poorPerformanceCounter >= 2) {
@@ -896,7 +905,7 @@ class StudioScene {
                         console.warn(`Adaptive downgrade triggered: MEDIUM -> LOW (${approxFps} FPS)`);
                         this.setQualityTier('LOW');
                     }
-                    this.fpsTracker.downgradeCooldown = 10; // Wait 20 seconds before assessing next downgrade
+                    this.fpsTracker.downgradeCooldown = 10;
                     this.fpsTracker.poorPerformanceCounter = 0;
                 }
             } else {
@@ -928,13 +937,11 @@ class StudioScene {
             this.controls.update();
         }
 
-        // Rotate particle container
         if (this.particles) {
             this.particles.rotation.y = elapsedTime * 0.015;
             this.particles.position.y = Math.sin(elapsedTime * 0.5) * 0.04;
         }
 
-        // Animate 3D Hotspots pulsing rings
         this.hotspots.forEach((hit, idx) => {
             if (hit.userData.ring) {
                 const pulse = 1 + Math.sin(elapsedTime * 3 + idx * 1.2) * 0.15;
@@ -942,13 +949,11 @@ class StudioScene {
             }
         });
 
-        // Neon sign subtle flicker
         if (this.neonLight && this.tier !== 'LOW') {
             const flicker = Math.sin(elapsedTime * 12) * 0.08 + Math.sin(elapsedTime * 2.3) * 0.15;
             this.neonLight.intensity = 3.2 + (Math.random() < 0.008 ? -1.2 : flicker);
         }
 
-        // Update animated IDE screen (throttled)
         this.renderScreenContent(elapsedTime);
 
         if (this.renderer && this.scene && this.camera) {

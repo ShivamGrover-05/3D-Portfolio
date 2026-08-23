@@ -1344,12 +1344,63 @@ body {
     .navbar { padding: 12px 16px; }
     .brand { font-size: 1.1rem; }
     .nav-actions .btn-primary { display: none; }
-    .social-icon { width: 34px; height: 34px; }
-    .hero-title { font-size: 2.0rem; line-height: 1.2; word-break: break-word; }
-    .hero-subtag { font-size: 0.72rem; letter-spacing: 1px; }
-    .hero-description { font-size: 0.95rem; }
-    .hero-cta { flex-direction: column; width: 100%; gap: 10px; }
-    .hero-cta .btn-primary, .hero-cta .btn-ghost { width: 100%; justify-content: center; min-height: 48px; }
+    .social-icon { width: 36px; height: 36px; }
+    
+    /* Dedicated Mobile Hero Composition (100dvh with prominent 3D desk) */
+    .hero-section {
+        min-height: 100dvh;
+        height: auto;
+        padding: 70px 18px 24px;
+        display: flex;
+        flex-direction: column;
+        justify-content: flex-end;
+        align-items: flex-start;
+    }
+    .scene-tag, .scene-num { display: none; }
+    
+    .hero-subtag { 
+        font-size: 0.72rem; 
+        letter-spacing: 1.2px; 
+        margin-bottom: 6px; 
+        color: var(--accent-cyan);
+    }
+    .hero-title { 
+        font-size: 1.85rem; 
+        line-height: 1.15; 
+        margin-bottom: 10px; 
+        letter-spacing: -0.5px;
+        word-break: break-word; 
+    }
+    .hero-description { 
+        font-size: 0.88rem; 
+        line-height: 1.5; 
+        margin-bottom: 18px; 
+        color: var(--text-muted);
+    }
+    .hero-cta { 
+        flex-direction: row; 
+        width: 100%; 
+        gap: 8px; 
+        margin-bottom: 18px; 
+    }
+    .hero-cta .btn-primary, .hero-cta .btn-ghost { 
+        flex: 1; 
+        justify-content: center; 
+        min-height: 44px; 
+        font-size: 0.78rem; 
+        padding: 10px 12px;
+    }
+    .hero-status-list { display: none; }
+    .scroll-indicator {
+        position: relative;
+        bottom: auto;
+        left: auto;
+        transform: none;
+        margin-top: 6px;
+        align-self: center;
+        opacity: 0.8;
+    }
+    
     .section-title { font-size: 1.7rem; word-break: break-word; }
     
     /* Mobile Exhibition Polish */
@@ -1385,7 +1436,9 @@ body {
 }
 
 @media (max-width: 380px) {
-    .hero-title { font-size: 1.75rem; }
+    .hero-title { font-size: 1.6rem; }
+    .hero-cta { flex-direction: column; }
+    .hero-cta .btn-primary, .hero-cta .btn-ghost { width: 100%; }
     .section-title { font-size: 1.45rem; }
     .switcher-num-btn { padding: 6px 8px; font-size: 0.7rem; min-width: 30px; }
     .nav-arrow-btn { padding: 6px 8px; font-size: 0.7rem; }
