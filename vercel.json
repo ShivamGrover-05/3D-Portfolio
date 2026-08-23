@@ -1,6 +1,7 @@
 {
   "version": 2,
   "name": "shivam-grover-3d-portfolio",
+  "outputDirectory": ".",
   "headers": [
     {
       "source": "/(.*)",

@@ -5,8 +5,7 @@
   "main": "api/contact.js",
   "type": "module",
   "scripts": {
-    "dev": "vercel dev",
-    "build": "echo 'Build complete'"
+    "dev": "vercel dev"
   },
   "dependencies": {
     "nodemailer": "^6.9.16"
