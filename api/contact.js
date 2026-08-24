@@ -97,7 +97,7 @@ export default async function handler(req, res) {
 
         // 4. Send Owner Notification Email
         const ownerMailOptions = {
-            from: `Shivam.dev Portfolio <${ownerEmail}>`,
+            from: `"Shivam Portfolio" <${ownerEmail}>`,
             to: ownerEmail,
             replyTo: cleanEmail,
             subject: `[Portfolio Inquiry] ${cleanSubject} — from ${cleanName}`,
@@ -140,13 +140,16 @@ export default async function handler(req, res) {
             `
         };
 
-        await mailClient.sendMail(ownerMailOptions);
+        const ownerResult = await mailClient.sendMail(ownerMailOptions);
+        console.log('OWNER EMAIL: SUCCESS ->', ownerResult.messageId || 'sent');
 
         // 5. Send Visitor Confirmation Thank-You Email
+        let visitorDelivered = false;
         try {
             const visitorMailOptions = {
-                from: `Shivam Grover <${ownerEmail}>`,
+                from: `"Shivam Grover" <${ownerEmail}>`,
                 to: cleanEmail,
+                replyTo: ownerEmail,
                 subject: `Thanks for reaching out — Shivam Grover`,
                 text: `Hi ${cleanName},\n\nThank you for reaching out through my portfolio (shivam.dev).\n\nI have received your message regarding "${cleanSubject}" and will get back to you as soon as possible.\n\nBest regards,\nShivam Grover\nCreative Developer & Automation Specialist\ncodewithshivamdev@gmail.com\nhttps://shivamgrover-05.github.io/`,
                 html: `
@@ -173,13 +176,17 @@ export default async function handler(req, res) {
                 `
             };
 
-            await mailClient.sendMail(visitorMailOptions);
+            const visitorResult = await mailClient.sendMail(visitorMailOptions);
+            visitorDelivered = true;
+            console.log('VISITOR EMAIL: SUCCESS ->', visitorResult.messageId || 'sent');
         } catch (confirmErr) {
-            console.warn('Confirmation email dispatch warning (non-fatal):', confirmErr);
+            console.warn('VISITOR EMAIL: FAILED (non-fatal) ->', confirmErr.message || confirmErr);
         }
 
         return res.status(200).json({
             success: true,
+            ownerEmailSent: true,
+            visitorEmailSent: visitorDelivered,
             message: 'Your message was successfully sent! A confirmation has been emailed to you.'
         });
 

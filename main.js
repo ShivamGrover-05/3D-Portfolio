@@ -416,12 +416,22 @@ document.addEventListener('DOMContentLoaded', () => {
 
         const isPlaying = window.lofiAudio ? window.lofiAudio.isPlaying : false;
 
-        if (mainPlayIcon) {
-            mainPlayIcon.setAttribute('data-lucide', isPlaying ? 'pause' : 'play');
+        const playBtnEl = document.getElementById('main-play-btn');
+        if (playBtnEl) {
+            playBtnEl.innerHTML = isPlaying 
+                ? '<i data-lucide="pause" style="width: 20px; height: 20px;"></i>' 
+                : '<i data-lucide="play" style="width: 20px; height: 20px; margin-left: 2px;"></i>';
+            playBtnEl.setAttribute('title', isPlaying ? 'Pause Music' : 'Play Music');
+            playBtnEl.setAttribute('aria-label', isPlaying ? 'Pause Music' : 'Play Music');
         }
-        if (miniVolumeIcon) {
-            miniVolumeIcon.setAttribute('data-lucide', isPlaying ? 'volume-2' : 'volume-x');
-            miniVolumeIcon.style.color = isPlaying ? 'var(--accent-green)' : 'var(--text-muted)';
+
+        const miniToggleEl = document.getElementById('mini-play-toggle-btn');
+        if (miniToggleEl) {
+            miniToggleEl.innerHTML = isPlaying
+                ? '<i data-lucide="volume-2" style="width: 15px; height: 15px; color: var(--accent-green);"></i>'
+                : '<i data-lucide="volume-x" style="width: 15px; height: 15px; color: var(--text-dim);"></i>';
+            miniToggleEl.setAttribute('title', isPlaying ? 'Mute/Pause Music' : 'Play Music');
+            miniToggleEl.setAttribute('aria-label', isPlaying ? 'Mute/Pause Music' : 'Play Music');
         }
 
         if (window.lucide) window.lucide.createIcons();
