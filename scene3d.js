@@ -38,16 +38,40 @@ class StudioScene {
             downgradeCooldown: 0
         };
 
-        // Dedicated 3D Desk Interaction & Pointer/Touch Tracking
-        this.deskRotation = {
-            currentX: 0,
-            currentY: 0,
-            targetX: 0,
-            targetY: 0,
-            minX: -0.32,  // Controlled vertical tilt limit (~ -18 deg)
-            maxX: 0.32,   // Controlled vertical tilt limit (~ +18 deg)
-            minY: -0.75,  // Controlled horizontal rotation limit (~ -43 deg)
-            maxY: 0.75    // Controlled horizontal rotation limit (~ +43 deg)
+        // Unified Multi-Input 3D Desk Transform Architecture
+        // targetRotation = BASE + SCROLL + CURSOR + DRAG
+        // targetPosition = BASE + SCROLL + CURSOR
+        this.deskTransform = {
+            baseRotation: { x: 0, y: 0, z: 0 },
+            basePosition: { x: 0, y: 0, z: 0 },
+            
+            scrollRotation: { x: 0, y: 0, z: 0 },
+            scrollPosition: { x: 0, y: 0, z: 0 },
+            
+            cursorRotation: { x: 0, y: 0 },
+            cursorPosition: { x: 0, y: 0 },
+            
+            dragRotation: { x: 0, y: 0 },
+            
+            currentRotation: { x: 0, y: 0, z: 0 },
+            currentPosition: { x: 0, y: 0, z: 0 },
+            
+            limits: {
+                minRotY: -0.85, // ~ -48 deg
+                maxRotY: 0.85,  // ~ +48 deg
+                minRotX: -0.38, // ~ -22 deg
+                maxRotX: 0.38,  // ~ +22 deg
+                minPosY: -0.35,
+                maxPosY: 0.35,
+                minPosX: -0.25,
+                maxPosX: 0.25
+            }
+        };
+
+        this.scrollState = {
+            progress: 0,
+            scrollY: 0,
+            velocity: 0
         };
 
         this.pointerState = {
@@ -670,6 +694,41 @@ class StudioScene {
         this.dismissLoadingScreen();
     }
 
+    onScroll(e) {
+        let scrollY = 0;
+        let totalHeight = document.documentElement.scrollHeight - window.innerHeight;
+        if (totalHeight <= 0) totalHeight = 1;
+
+        if (typeof e === 'object' && e !== null && 'scroll' in e) {
+            scrollY = e.scroll;
+            this.scrollState.velocity = e.velocity || 0;
+        } else {
+            scrollY = window.scrollY || window.pageYOffset || 0;
+        }
+
+        this.scrollState.scrollY = scrollY;
+        const globalProgress = Math.min(1, Math.max(0, scrollY / totalHeight));
+        this.scrollState.progress = globalProgress;
+
+        // Progressive scroll transform across hero and transition sections (first 2 viewports)
+        const heroThreshold = Math.max(window.innerHeight * 2.0, 1000);
+        const heroProgress = Math.min(1, Math.max(0, scrollY / heroThreshold));
+
+        // When scrolling down, smoothly rotate the desk along Y with a natural ease curve
+        const maxScrollRotY = this.deviceProfile.isMobile ? 0.35 : 0.45;
+        const maxScrollRotX = this.deviceProfile.isMobile ? 0.08 : 0.12;
+
+        // Harmonic sine wave: progressive rotation during hero, settles at resting angle
+        const easeScrollY = Math.sin(heroProgress * Math.PI * 0.5);
+
+        this.deskTransform.scrollRotation.y = easeScrollY * maxScrollRotY;
+        this.deskTransform.scrollRotation.x = Math.sin(heroProgress * Math.PI) * maxScrollRotX;
+
+        // Small subtle vertical & depth translation with scroll
+        this.deskTransform.scrollPosition.y = -heroProgress * 0.12;
+        this.deskTransform.scrollPosition.z = -heroProgress * 0.08;
+    }
+
     setupPointerInteractions() {
         const resetBtn = document.getElementById('reset-desk-view-btn');
         const hintPill = document.getElementById('drag-hint-pill');
@@ -706,12 +765,22 @@ class StudioScene {
         };
 
         const onPointerMove = (e) => {
-            // Cursor Parallax Coordinates
+            // Cursor Parallax Coordinates Normalized (-1 to +1)
             this.mouse.targetX = (e.clientX / window.innerWidth - 0.5) * 2;
             this.mouse.targetY = -(e.clientY / window.innerHeight - 0.5) * 2;
 
             this.mouseVector.x = (e.clientX / window.innerWidth) * 2 - 1;
             this.mouseVector.y = -(e.clientY / window.innerHeight) * 2 + 1;
+
+            // Update Desktop Cursor Transform Contribution (subtle micro-tilt & parallax)
+            if (!this.deviceProfile.isTouch) {
+                const maxCursorRotY = 0.16; // ~9 deg horizontal parallax
+                const maxCursorRotX = 0.10; // ~6 deg vertical tilt
+                this.deskTransform.cursorRotation.y = this.mouse.targetX * maxCursorRotY;
+                this.deskTransform.cursorRotation.x = -this.mouse.targetY * maxCursorRotX;
+                this.deskTransform.cursorPosition.x = this.mouse.targetX * 0.05;
+                this.deskTransform.cursorPosition.y = this.mouse.targetY * 0.03;
+            }
 
             // Hotspot Raycast Hover Detection on Desktop
             if (!this.pointerState.isDown && this.hotspots.length > 0 && this.camera && !this.deviceProfile.isTouch) {
@@ -753,17 +822,19 @@ class StudioScene {
                 const dist = Math.hypot(deltaX, deltaY);
                 if (dist > 9) {
                     if (Math.abs(deltaX) > Math.abs(deltaY) * 1.15) {
+                        // Horizontal swipe -> Engage 3D Manual Rotation!
                         this.pointerState.mode = '3D_DRAG';
                         if (window.triggerHaptic) window.triggerHaptic('desk');
                         if (hintPill) hintPill.classList.add('fade-out');
                         localStorage.setItem('portfolio_3d_hint_seen', 'true');
                     } else {
+                        // Vertical swipe -> Release to native page scrolling (which drives scrollRotation automatically)
                         this.pointerState.mode = 'PAGE_SCROLL';
                     }
                 }
             }
 
-            // 3D Desk Drag Rotation
+            // 3D Desk Manual Drag Rotation
             if (this.pointerState.mode === '3D_DRAG') {
                 const dx = e.clientX - this.pointerState.lastX;
                 const dy = e.clientY - this.pointerState.lastY;
@@ -772,19 +843,19 @@ class StudioScene {
                     this.pointerState.hasMoved = true;
                 }
 
-                const sensX = this.pointerState.pointerType === 'touch' ? 0.007 : 0.005;
-                const sensY = this.pointerState.pointerType === 'touch' ? 0.004 : 0.003;
+                const sensX = this.pointerState.pointerType === 'touch' ? 0.0075 : 0.0055;
+                const sensY = this.pointerState.pointerType === 'touch' ? 0.0045 : 0.0035;
 
-                this.deskRotation.targetY = Math.max(
-                    this.deskRotation.minY,
-                    Math.min(this.deskRotation.maxY, this.deskRotation.targetY + dx * sensX)
+                this.deskTransform.dragRotation.y = Math.max(
+                    -0.65,
+                    Math.min(0.65, this.deskTransform.dragRotation.y + dx * sensX)
                 );
-                this.deskRotation.targetX = Math.max(
-                    this.deskRotation.minX,
-                    Math.min(this.deskRotation.maxX, this.deskRotation.targetX + dy * sensY)
+                this.deskTransform.dragRotation.x = Math.max(
+                    -0.28,
+                    Math.min(0.28, this.deskTransform.dragRotation.x + dy * sensY)
                 );
 
-                if (resetBtn && (Math.abs(this.deskRotation.targetY) > 0.04 || Math.abs(this.deskRotation.targetX) > 0.04)) {
+                if (resetBtn && (Math.abs(this.deskTransform.dragRotation.y) > 0.04 || Math.abs(this.deskTransform.dragRotation.x) > 0.04)) {
                     resetBtn.classList.add('visible');
                 }
 
@@ -813,10 +884,23 @@ class StudioScene {
             }
         };
 
+        const onMouseLeave = () => {
+            this.mouse.targetX = 0;
+            this.mouse.targetY = 0;
+            this.deskTransform.cursorRotation.y = 0;
+            this.deskTransform.cursorRotation.x = 0;
+            this.deskTransform.cursorPosition.x = 0;
+            this.deskTransform.cursorPosition.y = 0;
+        };
+
         window.addEventListener('pointerdown', onPointerDown, { passive: true });
         window.addEventListener('pointermove', onPointerMove, { passive: true });
         window.addEventListener('pointerup', onPointerUp, { passive: true });
         window.addEventListener('pointercancel', onPointerUp, { passive: true });
+        document.addEventListener('mouseleave', onMouseLeave, { passive: true });
+
+        // Native scroll fallback (in addition to Lenis synchronization)
+        window.addEventListener('scroll', () => this.onScroll(window.scrollY), { passive: true });
 
         if (resetBtn) {
             resetBtn.addEventListener('click', (e) => {
@@ -929,18 +1013,16 @@ class StudioScene {
         if (window.triggerHaptic) window.triggerHaptic('reset');
         const p = this.getCameraPreset(this.currentSection);
         
-        this.deskRotation.targetX = 0;
-        this.deskRotation.targetY = 0;
+        // Reset manual drag offset smoothly
+        this.deskTransform.dragRotation.x = 0;
+        this.deskTransform.dragRotation.y = 0;
 
         if (window.gsap) {
             if (this.camera && this.controls) {
                 window.gsap.to(this.camera.position, { x: p.x, y: p.y, z: p.z, duration: 0.85, ease: "power2.out" });
                 window.gsap.to(this.controls.target, { x: p.targetX, y: p.targetY, z: p.targetZ, duration: 0.85, ease: "power2.out" });
             }
-            window.gsap.to(this.deskRotation, { currentX: 0, currentY: 0, duration: 0.85, ease: "power2.out" });
         } else {
-            this.deskRotation.currentX = 0;
-            this.deskRotation.currentY = 0;
             if (this.camera && this.controls) {
                 this.camera.position.set(p.x, p.y, p.z);
                 this.controls.target.set(p.targetX, p.targetY, p.targetZ);
@@ -1086,16 +1168,44 @@ class StudioScene {
             this.mouse.y += (this.mouse.targetY - this.mouse.y) * 0.05;
         }
 
-        // Frame-Rate Independent Smooth Desk Rotation & Parallax Blending
+        // Frame-Rate Independent Unified Multi-Input Physical Desk Interpolation
+        // Target: Combined (BASE + SCROLL + CURSOR + DRAG)
         if (this.model) {
-            const parallaxX = this.deviceProfile.isTouch ? 0 : this.mouse.x * 0.12;
-            const parallaxY = this.deviceProfile.isTouch ? 0 : this.mouse.y * 0.06;
+            const t = this.deskTransform;
 
-            this.deskRotation.currentY += (this.deskRotation.targetY + parallaxX - this.deskRotation.currentY) * 0.08;
-            this.deskRotation.currentX += (this.deskRotation.targetX - parallaxY - this.deskRotation.currentX) * 0.08;
+            // Combine rotations
+            let targetRotX = t.baseRotation.x + t.scrollRotation.x + (this.deviceProfile.isTouch ? 0 : t.cursorRotation.x) + t.dragRotation.x;
+            let targetRotY = t.baseRotation.y + t.scrollRotation.y + (this.deviceProfile.isTouch ? 0 : t.cursorRotation.y) + t.dragRotation.y;
+            let targetRotZ = t.baseRotation.z + t.scrollRotation.z;
 
-            this.model.rotation.y = this.deskRotation.currentY;
-            this.model.rotation.x = this.deskRotation.currentX;
+            // Combine positions
+            let targetPosX = t.basePosition.x + (this.deviceProfile.isTouch ? 0 : t.cursorPosition.x);
+            let targetPosY = t.basePosition.y + t.scrollPosition.y + (this.deviceProfile.isTouch ? 0 : t.cursorPosition.y);
+            let targetPosZ = t.basePosition.z + t.scrollPosition.z;
+
+            // Clamp combined targets within safety bounds
+            targetRotX = Math.max(t.limits.minRotX, Math.min(t.limits.maxRotX, targetRotX));
+            targetRotY = Math.max(t.limits.minRotY, Math.min(t.limits.maxRotY, targetRotY));
+            targetPosX = Math.max(t.limits.minPosX, Math.min(t.limits.maxPosX, targetPosX));
+            targetPosY = Math.max(t.limits.minPosY, Math.min(t.limits.maxPosY, targetPosY));
+
+            // Smooth physical LERP (0.075 easing for weighted natural inertia)
+            t.currentRotation.x += (targetRotX - t.currentRotation.x) * 0.075;
+            t.currentRotation.y += (targetRotY - t.currentRotation.y) * 0.075;
+            t.currentRotation.z += (targetRotZ - t.currentRotation.z) * 0.075;
+
+            t.currentPosition.x += (targetPosX - t.currentPosition.x) * 0.075;
+            t.currentPosition.y += (targetPosY - t.currentPosition.y) * 0.075;
+            t.currentPosition.z += (targetPosZ - t.currentPosition.z) * 0.075;
+
+            // Apply transforms to the 3D model
+            this.model.rotation.x = t.currentRotation.x;
+            this.model.rotation.y = t.currentRotation.y;
+            this.model.rotation.z = t.currentRotation.z;
+
+            this.model.position.x = t.currentPosition.x;
+            this.model.position.y = t.currentPosition.y;
+            this.model.position.z = t.currentPosition.z;
         }
 
         if (this.controls && this.controls.enabled) {

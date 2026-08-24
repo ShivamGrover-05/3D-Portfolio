@@ -57,10 +57,13 @@ document.addEventListener('DOMContentLoaded', () => {
 
         window.lenis = lenis;
 
-        // Synchronize with GSAP ScrollTrigger
-        if (typeof ScrollTrigger !== 'undefined') {
-            lenis.on('scroll', ScrollTrigger.update);
-        }
+        // Synchronize with GSAP ScrollTrigger & 3D Studio Scene
+        lenis.on('scroll', (e) => {
+            if (typeof ScrollTrigger !== 'undefined') ScrollTrigger.update();
+            if (window.studioScene && typeof window.studioScene.onScroll === 'function') {
+                window.studioScene.onScroll(e);
+            }
+        });
 
         // Coordinate unified animation loop via GSAP ticker
         if (typeof gsap !== 'undefined') {
