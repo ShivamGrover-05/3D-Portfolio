@@ -462,6 +462,7 @@ body {
 .hero-title .glow-word {
     background: linear-gradient(135deg, #00ff9d 0%, #00f3ff 100%);
     -webkit-background-clip: text;
+    background-clip: text;
     -webkit-text-fill-color: transparent;
     text-shadow: 0 0 30px rgba(0, 255, 157, 0.3);
 }
@@ -493,9 +494,8 @@ body {
     color: var(--text-muted);
     display: flex;
     align-items: center;
-    text-shadow: 0 1px 6px rgba(0, 0, 0, 0.5);
-}
     gap: 8px;
+    text-shadow: 0 1px 6px rgba(0, 0, 0, 0.5);
 }
 
 .status-badge .dot {
@@ -3013,6 +3013,7 @@ body {
 .volume-slider {
     flex: 1;
     -webkit-appearance: none;
+    appearance: none;
     height: 4px;
     border-radius: 2px;
     background: rgba(255, 255, 255, 0.15);
@@ -3302,6 +3303,7 @@ body.fallback-2d-mode #content-layer {
     width: 60px;
     height: 4px;
     -webkit-appearance: none;
+    appearance: none;
     background: rgba(255, 255, 255, 0.15);
     border-radius: 2px;
     outline: none;
