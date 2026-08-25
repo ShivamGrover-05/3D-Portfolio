@@ -22,6 +22,9 @@ class StudioScene {
         this.isContextLost = false;
         this.animFrameId = null;
         this.isInitialized = false;
+        this.isVisible = true;
+        this.isTabVisible = typeof document !== 'undefined' ? !document.hidden : true;
+        this.sceneObserver = null;
         this.stage = 0; // 0: uninitialized, 1: shell & camera, 2: lighting & floor, 3: GLB model & screen, 4: hotspots & particles
 
         // Capability-Based Device Profiling
@@ -263,6 +266,7 @@ class StudioScene {
 
             // Stage 6: Interactive Pointer, Cursor Parallax & Mobile Gesture Subsystem
             this.setupPointerInteractions();
+            this.setupVisibilityObserver();
 
             // Event Listeners
             window.addEventListener('resize', this.onWindowResize.bind(this), { passive: true });
@@ -910,6 +914,49 @@ class StudioScene {
         }
     }
 
+    setupVisibilityObserver() {
+        if (this.sceneObserver) {
+            this.sceneObserver.disconnect();
+            this.sceneObserver = null;
+        }
+
+        // 1. Observe Hero Section / 3D Canvas
+        const targetElement = document.getElementById('home') || this.container;
+        if ('IntersectionObserver' in window && targetElement) {
+            this.sceneObserver = new IntersectionObserver((entries) => {
+                entries.forEach((entry) => {
+                    const wasVisible = this.isVisible;
+                    this.isVisible = entry.isIntersecting;
+
+                    if (this.isVisible && !wasVisible && this.isTabVisible) {
+                        if (!this.animFrameId && !this.isContextLost) {
+                            this.clock.start();
+                            this.animate();
+                        }
+                    }
+                });
+            }, {
+                root: null,
+                rootMargin: '100px 0px 100px 0px',
+                threshold: [0, 0.01]
+            });
+            this.sceneObserver.observe(targetElement);
+        }
+
+        // 2. Document Visibility API
+        document.addEventListener('visibilitychange', () => {
+            const wasTabVisible = this.isTabVisible;
+            this.isTabVisible = !document.hidden;
+
+            if (this.isTabVisible && !wasTabVisible && this.isVisible) {
+                if (!this.animFrameId && !this.isContextLost) {
+                    this.clock.start();
+                    this.animate();
+                }
+            }
+        }, { passive: true });
+    }
+
     handleRaycastClick(e) {
         if (!this.camera || this.hotspots.length === 0) return;
 
@@ -1155,6 +1202,15 @@ class StudioScene {
 
     animate() {
         if (this.isContextLost) return;
+
+        // If 3D Scene is outside viewport or browser tab is hidden, halt RAF loop to save GPU & battery
+        if (!this.isVisible || !this.isTabVisible) {
+            if (this.animFrameId) {
+                cancelAnimationFrame(this.animFrameId);
+                this.animFrameId = null;
+            }
+            return;
+        }
 
         this.animFrameId = requestAnimationFrame(this.animate.bind(this));
 

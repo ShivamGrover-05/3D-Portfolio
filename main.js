@@ -424,8 +424,8 @@ document.addEventListener('DOMContentLoaded', () => {
             playBtnEl.innerHTML = isPlaying 
                 ? '<i data-lucide="pause" style="width: 20px; height: 20px;"></i>' 
                 : '<i data-lucide="play" style="width: 20px; height: 20px; margin-left: 2px;"></i>';
-            playBtnEl.setAttribute('title', isPlaying ? 'Pause Music' : 'Play Music');
-            playBtnEl.setAttribute('aria-label', isPlaying ? 'Pause Music' : 'Play Music');
+            playBtnEl.setAttribute('title', isPlaying ? 'Pause Music' : 'Play Ambient Music / Enable Sound');
+            playBtnEl.setAttribute('aria-label', isPlaying ? 'Pause Music' : 'Play Ambient Music / Enable Sound');
         }
 
         const miniToggleEl = document.getElementById('mini-play-toggle-btn');
@@ -433,8 +433,8 @@ document.addEventListener('DOMContentLoaded', () => {
             miniToggleEl.innerHTML = isPlaying
                 ? '<i data-lucide="volume-2" style="width: 15px; height: 15px; color: var(--accent-green);"></i>'
                 : '<i data-lucide="volume-x" style="width: 15px; height: 15px; color: var(--text-dim);"></i>';
-            miniToggleEl.setAttribute('title', isPlaying ? 'Mute/Pause Music' : 'Play Music');
-            miniToggleEl.setAttribute('aria-label', isPlaying ? 'Mute/Pause Music' : 'Play Music');
+            miniToggleEl.setAttribute('title', isPlaying ? 'Mute Ambient Music' : 'Unmute / Enable Sound');
+            miniToggleEl.setAttribute('aria-label', isPlaying ? 'Mute Ambient Music' : 'Unmute / Enable Sound');
         }
 
         if (window.lucide) window.lucide.createIcons();
@@ -524,27 +524,10 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     }
 
-    // Autoplay Management
+    // Initialize Audio Player UI in Muted/Stopped State (Explicit User-Triggered Sound)
     if (window.lofiAudio) {
-        window.lofiAudio.attemptAutoplay();
+        syncAudioUI(window.lofiAudio.getCurrentTrack());
     }
-
-    // Unblock audio on first user touch / click anywhere if blocked by browser policy
-    const handleFirstInteraction = () => {
-        if (window.lofiAudio && !window.lofiAudio.isPlaying) {
-            const savedPref = localStorage.getItem('portfolio_sound_enabled');
-            if (savedPref !== 'false') {
-                window.lofiAudio.play();
-                syncAudioUI(window.lofiAudio.getCurrentTrack());
-            }
-        }
-        if (autoplayPrompt) autoplayPrompt.style.display = 'none';
-        window.removeEventListener('click', handleFirstInteraction);
-        window.removeEventListener('touchstart', handleFirstInteraction);
-    };
-
-    window.addEventListener('click', handleFirstInteraction, { once: true });
-    window.addEventListener('touchstart', handleFirstInteraction, { once: true });
 
     // 10. Contact Form Submissions (Vercel Serverless Function POST /api/contact)
     const inlineContactForm = document.getElementById('inline-contact-form');

@@ -331,18 +331,24 @@ class AmbientMusicSystem {
     }
 
     play() {
-        if (!this.ctx) this.init();
-        if (this.ctx && this.ctx.state === 'suspended') {
-            this.ctx.resume();
+        try {
+            if (!this.ctx) this.init();
+            if (this.ctx && this.ctx.state === 'suspended') {
+                this.ctx.resume().catch(() => {});
+            }
+            this.isPlaying = true;
+            localStorage.setItem('portfolio_sound_enabled', 'true');
+            this.playProgression();
+            const track = this.getCurrentTrack();
+            if (window.onAmbientTrackChange) {
+                window.onAmbientTrackChange(track);
+            }
+            return true;
+        } catch (err) {
+            console.warn('Audio playback error:', err);
+            this.isPlaying = false;
+            return false;
         }
-        this.isPlaying = true;
-        localStorage.setItem('portfolio_sound_enabled', 'true');
-        this.playProgression();
-        const track = this.getCurrentTrack();
-        if (window.onAmbientTrackChange) {
-            window.onAmbientTrackChange(track);
-        }
-        return true;
     }
 
     pause() {
@@ -357,22 +363,6 @@ class AmbientMusicSystem {
             return this.pause();
         } else {
             return this.play();
-        }
-    }
-
-    attemptAutoplay() {
-        const savedPref = localStorage.getItem('portfolio_sound_enabled');
-        if (savedPref === 'false') return; // User explicitly turned it off
-
-        this.init();
-        if (this.ctx) {
-            this.ctx.resume().then(() => {
-                if (this.ctx.state === 'running') {
-                    this.play();
-                }
-            }).catch(() => {
-                // Autoplay blocked by browser policy, will resume on first user interaction
-            });
         }
     }
 
