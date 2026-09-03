@@ -47,62 +47,14 @@
 
     <!-- 3D Interaction Hint -->
     <div id="drag-hint-pill" class="drag-hint-pill">
-        <i data-lucide="move" style="width: 14px; height: 14px; color: var(--accent-cyan);"></i> DRAG TO EXPLORE 3D DESK
-    </div>
-
-    <!-- Floating Ambient Music Player -->
-    <div id="audio-widget" class="audio-widget minimized" aria-label="Ambient Music Player">
-        <!-- Minimized Floating Pill -->
-        <div id="mini-player-bar" class="mini-player-pill" title="Click to Expand Music Player">
-            <button id="mini-play-toggle-btn" class="mini-icon-btn" aria-label="Toggle Play/Pause">
-                <i data-lucide="volume-2" id="mini-volume-icon" style="width: 15px; height: 15px; color: var(--accent-green);"></i>
-            </button>
-            <span class="mini-music-note">♪</span>
-            <span id="mini-track-title" class="mini-title">Deep Focus</span>
-            <i data-lucide="chevron-up" class="mini-expand-arrow" style="width: 14px; height: 14px;"></i>
-        </div>
-
-        <!-- Expanded Music Card -->
-        <div id="expanded-player-card" class="expanded-player-card">
-            <div class="player-top-header">
-                <div class="now-playing-tag">
-                    <span class="pulse-dot"></span> NOW PLAYING
-                </div>
-                <button id="minimize-player-btn" class="player-ctrl-btn mini-close" title="Minimize Player" aria-label="Minimize Player">
-                    <i data-lucide="chevron-down" style="width: 16px; height: 16px;"></i>
-                </button>
-            </div>
-            
-            <div class="player-track-info">
-                <h4 id="expanded-track-title" class="track-name">Deep Focus</h4>
-                <p id="expanded-track-genre" class="track-genre">Vintage Lo-Fi Rhodes</p>
-            </div>
-
-            <div class="player-controls-row">
-                <button id="prev-track-btn" class="player-ctrl-btn" title="Previous Track" aria-label="Previous Track">
-                    <i data-lucide="skip-back" style="width: 18px; height: 18px;"></i>
-                </button>
-                <button id="main-play-btn" class="player-main-play-btn" title="Play / Pause Music" aria-label="Play / Pause Music">
-                    <i data-lucide="pause" id="main-play-icon" style="width: 20px; height: 20px;"></i>
-                </button>
-                <button id="next-track-btn" class="player-ctrl-btn" title="Next Track" aria-label="Next Track">
-                    <i data-lucide="skip-forward" style="width: 18px; height: 18px;"></i>
-                </button>
-            </div>
-
-            <div class="player-volume-row">
-                <i data-lucide="volume-1" style="width: 14px; height: 14px; color: var(--text-dim);"></i>
-                <input type="range" id="volume-slider" min="0" max="100" value="30" class="volume-slider" aria-label="Volume Slider">
-                <i data-lucide="volume-2" style="width: 14px; height: 14px; color: var(--accent-cyan);"></i>
-            </div>
-        </div>
+        <i data-lucide="move" style="width: 14px; height: 14px; color: var(--accent-cyan);"></i> DRAG TO EXPLORE 3D CORE
     </div>
 
     <!-- Loading Screen -->
     <div id="loading-indicator">
         <div class="loader-spinner"></div>
         <div style="font-family: var(--font-mono); font-size: 0.85rem; color: #a29bfe; letter-spacing: 2px;">
-            INITIALIZING 3D STUDIO...
+            INITIALIZING 3D CORE...
         </div>
         <div class="loader-bar">
             <div id="loading-bar-fill"></div>
@@ -175,185 +127,312 @@
         </div>
     </div>
 
-    <!-- Interactive Virtual Computer OS Layer -->
-    <div id="virtual-computer-layer" class="virtual-computer-overlay">
-        <div class="virtual-computer-viewport">
-            
-            <!-- Desktop Top System Bar -->
-            <div class="os-top-system-bar">
-                <div class="os-system-brand">
-                    <span class="os-dot-live"></span>
-                    <span>SHIVAM OS v2.4</span>
-                    <span style="color: var(--text-dim); font-size: 0.7rem;">&bull; WORKSTATION</span>
-                </div>
-                <div class="os-top-actions">
-                    <button id="exit-computer-btn" class="os-exit-btn">
-                        <i data-lucide="x" style="width: 14px; height: 14px;"></i> EXIT COMPUTER [ESC]
-                    </button>
-                </div>
-            </div>
-
-            <!-- Boot Sequence Screen -->
-            <div id="os-boot-screen" class="os-boot-container">
-                <div class="os-boot-content">
-                    <div class="os-boot-logo">SHIVAM OS</div>
-                    <div class="os-boot-spinner"></div>
-                    <div class="os-boot-logs">
-                        <div>&gt; MOUNTING WORKSPACE... [OK]</div>
-                        <div>&gt; INITIALIZING SHADERS & GLB ASSETS... [OK]</div>
-                        <div>&gt; LAUNCHING REVOPS & AUTOMATION ENGINE... [OK]</div>
-                        <div>&gt; DESKTOP ENVIRONMENT READY [ONLINE]</div>
+    <!-- Redesigned Futuristic Studio OS Layer -->
+    <div id="virtual-computer-layer" class="virtual-computer-overlay" aria-label="Studio Operating System">
+        <div class="studio-os-wrapper">
+            <!-- Studio OS Top Status Bar -->
+            <header class="studio-os-topbar">
+                <div class="studio-os-brand">
+                    <div class="os-brand-icon"><i data-lucide="terminal"></i></div>
+                    <div class="os-brand-meta">
+                        <span class="os-title">STUDIO OS</span>
+                        <span class="os-version">v2.5</span>
                     </div>
-                </div>
-            </div>
-
-            <!-- Desktop Viewport (For Laptops & Desktops) -->
-            <div id="os-desktop-screen" class="os-desktop-container">
-                <!-- Idle / Standby Screen -->
-                <div id="os-idle-screen" class="os-idle-screen">
-                    <div class="os-idle-brand">SHIVAM.DEV</div>
-                    <div class="os-idle-status">SYSTEM STANDBY</div>
-                    <div class="os-idle-cta">CLICK TO START</div>
-                </div>
-
-                <!-- Desktop App Icons Grid -->
-                <div class="os-desktop-grid">
-                    <div class="desktop-icon" data-app="projects">
-                        <div class="icon-box"><i data-lucide="folder-git-2"></i></div>
-                        <span class="icon-label">Projects</span>
-                    </div>
-                    <div class="desktop-icon" data-app="browser">
-                        <div class="icon-box"><i data-lucide="globe"></i></div>
-                        <span class="icon-label">Browser</span>
-                    </div>
-                    <div class="desktop-icon" data-app="terminal">
-                        <div class="icon-box"><i data-lucide="terminal"></i></div>
-                        <span class="icon-label">Terminal</span>
-                    </div>
-                    <div class="desktop-icon" data-app="mycomputer">
-                        <div class="icon-box"><i data-lucide="hard-drive"></i></div>
-                        <span class="icon-label">My Computer</span>
-                    </div>
-                    <div class="desktop-icon" data-app="resume">
-                        <div class="icon-box"><i data-lucide="file-text"></i></div>
-                        <span class="icon-label">Resume.pdf</span>
-                    </div>
-                    <div class="desktop-icon" data-app="about">
-                        <div class="icon-box"><i data-lucide="user"></i></div>
-                        <span class="icon-label">About Me</span>
-                    </div>
-                    <div class="desktop-icon" data-app="settings">
-                        <div class="icon-box"><i data-lucide="sliders"></i></div>
-                        <span class="icon-label">Settings</span>
-                    </div>
-                    <div class="desktop-icon" data-app="contact">
-                        <div class="icon-box"><i data-lucide="mail"></i></div>
-                        <span class="icon-label">Contact</span>
+                    <div class="os-status-pill">
+                        <span class="status-pulse-dot"></span>
+                        <span>SYS // ONLINE</span>
                     </div>
                 </div>
 
-                <!-- Draggable Windows Area -->
-                <div id="os-windows-container" class="os-windows-area"></div>
-
-                <!-- Desktop OS Taskbar -->
-                <div class="os-taskbar">
-                    <button class="os-start-btn" id="os-start-btn">
-                        <i data-lucide="zap" style="width: 14px; height: 14px; color: var(--accent-cyan);"></i> SHIVAM OS
+                <!-- Center Quick Navigation Tabs (Desktop & Tablet) -->
+                <nav class="studio-os-nav-tabs" id="studio-os-nav-tabs" aria-label="Studio OS Navigation">
+                    <button class="os-nav-tab active" data-tab="profile" aria-label="Profile Section">
+                        <span class="tab-num">01</span><span class="tab-label">PROFILE</span>
                     </button>
-                    <div class="os-taskbar-tasks" id="os-taskbar-tasks"></div>
-                    <div class="os-system-tray">
-                        <span class="tray-pill"><i data-lucide="cpu" style="width: 12px; height: 12px;"></i> ONLINE</span>
-                        <span id="os-taskbar-clock" class="tray-clock">12:00</span>
+                    <button class="os-nav-tab" data-tab="projects" aria-label="Projects Section">
+                        <span class="tab-num">02</span><span class="tab-label">PROJECTS</span>
+                    </button>
+                    <button class="os-nav-tab" data-tab="experiments" aria-label="Experiments Section">
+                        <span class="tab-num">03</span><span class="tab-label">EXPERIMENTS</span>
+                    </button>
+                    <button class="os-nav-tab" data-tab="stack" aria-label="Tech Stack Section">
+                        <span class="tab-num">04</span><span class="tab-label">STACK</span>
+                    </button>
+                    <button class="os-nav-tab" data-tab="contact" aria-label="Contact Section">
+                        <span class="tab-num">05</span><span class="tab-label">CONTACT</span>
+                    </button>
+                </nav>
+
+                <!-- Right Telemetry & Reliable Exit Button -->
+                <div class="studio-os-telemetry">
+                    <div class="os-chip telemetry-gpu" id="os-gpu-status"><i data-lucide="cpu"></i> <span>GPU ACTIVE</span></div>
+                    <button id="exit-computer-btn" class="studio-os-exit-btn" title="Exit Studio OS (or press Escape)" aria-label="Close Studio OS">
+                        <i data-lucide="x"></i>
+                        <span>CLOSE</span>
+                        <kbd class="os-kbd">ESC</kbd>
+                    </button>
+                </div>
+            </header>
+
+            <!-- Studio OS Main Viewport -->
+            <main class="studio-os-body">
+                <!-- Panel 01: Profile -->
+                <section class="studio-os-panel active" id="os-panel-profile" data-panel="profile">
+                    <div class="os-panel-header">
+                        <div class="panel-tag"><span class="accent-cyan">01 //</span> PROFILE</div>
+                        <h2 class="panel-title">CREATIVE SYSTEM</h2>
                     </div>
-                </div>
-            </div>
+                    <div class="os-profile-grid">
+                        <div class="os-card bio-card">
+                            <div class="card-label"><i data-lucide="user-check"></i> EXECUTIVE SUMMARY</div>
+                            <p class="lead-bio">
+                                Creative Web Developer & RevOps Automation Specialist based in New Delhi, India. I specialize in fusing high-performance 3D WebGL interfaces with enterprise-grade workflow automation engines to build digital products that captivate and convert.
+                            </p>
+                            <div class="stats-row">
+                                <div class="stat-box">
+                                    <span class="stat-val">3+</span>
+                                    <span class="stat-lbl">YEARS PRODUCTION</span>
+                                </div>
+                                <div class="stat-box">
+                                    <span class="stat-val">5+</span>
+                                    <span class="stat-lbl">FLAGSHIP BUILDS</span>
+                                </div>
+                                <div class="stat-box">
+                                    <span class="stat-val">100%</span>
+                                    <span class="stat-lbl">UPTIME & RELIABILITY</span>
+                                </div>
+                            </div>
+                        </div>
 
-            <!-- Dedicated Mobile Studio OS Workstation (For Phones & Tablets) -->
-            <div id="os-mobile-workstation" class="mobile-os-container" style="display: none;">
-                <!-- Mobile Status Bar -->
-                <div class="mobile-os-status-bar">
-                    <span id="mobile-os-clock" class="mobile-status-time">12:00</span>
-                    <div class="mobile-status-badges">
-                        <span class="mobile-badge-chip green">ONLINE</span>
-                        <span class="mobile-badge-chip cyan">GPU OPTIMIZED</span>
+                        <div class="os-card focus-card">
+                            <div class="card-label"><i data-lucide="target"></i> CORE FOCUS & METHODOLOGY</div>
+                            <ul class="focus-list">
+                                <li>
+                                    <span class="bullet-dot cyan"></span>
+                                    <div>
+                                        <strong>Interactive 3D Web Experiences:</strong> Lightweight procedural Three.js architectures, GLSL shaders, 60 FPS mobile optimization, and zero layout shift.
+                                    </div>
+                                </li>
+                                <li>
+                                    <span class="bullet-dot purple"></span>
+                                    <div>
+                                        <strong>RevOps & Workflow Automation:</strong> Deep integrations across n8n, HubSpot CRM, Zapier, custom webhooks, and REST endpoints for synchronized operations.
+                                    </div>
+                                </li>
+                                <li>
+                                    <span class="bullet-dot green"></span>
+                                    <div>
+                                        <strong>Modern Frontend Architecture:</strong> Semantic HTML5, modern CSS, GSAP physics, Lenis smooth scrolling, and accessible responsive UX.
+                                    </div>
+                                </li>
+                            </ul>
+                        </div>
                     </div>
-                    <button id="mobile-os-exit-btn" class="mobile-os-close-btn" title="Exit Studio OS">
-                        <i data-lucide="x" style="width: 16px; height: 16px;"></i>
-                    </button>
-                </div>
+                </section>
 
-                <!-- Mobile Header Notification Banner -->
-                <div class="mobile-os-banner">
-                    <div class="banner-title">SHIVAM STUDIO OS</div>
-                    <div class="banner-sub">Workstation • Full-Stack Developer & Automation Engine</div>
-                </div>
-
-                <!-- Mobile Apps Grid (Touch-friendly ~48px+ hit targets) -->
-                <div class="mobile-os-apps-grid">
-                    <button class="mobile-os-app-item" data-app="projects">
-                        <div class="app-icon-wrap cyan"><i data-lucide="folder-git-2"></i></div>
-                        <span class="app-label">Projects</span>
-                    </button>
-                    <button class="mobile-os-app-item" data-app="browser">
-                        <div class="app-icon-wrap purple"><i data-lucide="globe"></i></div>
-                        <span class="app-label">Browser</span>
-                    </button>
-                    <button class="mobile-os-app-item" data-app="terminal">
-                        <div class="app-icon-wrap green"><i data-lucide="terminal"></i></div>
-                        <span class="app-label">Terminal</span>
-                    </button>
-                    <button class="mobile-os-app-item" data-app="about">
-                        <div class="app-icon-wrap cyan"><i data-lucide="user"></i></div>
-                        <span class="app-label">About Me</span>
-                    </button>
-                    <button class="mobile-os-app-item" data-app="resume">
-                        <div class="app-icon-wrap lime"><i data-lucide="file-text"></i></div>
-                        <span class="app-label">Resume</span>
-                    </button>
-                    <button class="mobile-os-app-item" data-app="settings">
-                        <div class="app-icon-wrap purple"><i data-lucide="sliders"></i></div>
-                        <span class="app-label">Settings</span>
-                    </button>
-                    <button class="mobile-os-app-item" data-app="contact">
-                        <div class="app-icon-wrap green"><i data-lucide="mail"></i></div>
-                        <span class="app-label">Contact</span>
-                    </button>
-                </div>
-
-                <!-- Mobile Bottom Dock -->
-                <div class="mobile-os-dock">
-                    <button class="mobile-dock-btn active" data-app="home" title="Home Screen">
-                        <i data-lucide="layout-grid"></i>
-                        <span>Home</span>
-                    </button>
-                    <button class="mobile-dock-btn" data-app="projects" title="Projects">
-                        <i data-lucide="folder-git-2"></i>
-                        <span>Projects</span>
-                    </button>
-                    <button class="mobile-dock-btn" data-app="terminal" title="Terminal">
-                        <i data-lucide="terminal"></i>
-                        <span>Terminal</span>
-                    </button>
-                    <button class="mobile-dock-btn" data-app="contact" title="Contact">
-                        <i data-lucide="mail"></i>
-                        <span>Contact</span>
-                    </button>
-                </div>
-
-                <!-- Mobile App Modal Viewport -->
-                <div id="mobile-app-modal-view" class="mobile-app-fullscreen-modal">
-                    <div class="mobile-modal-header">
-                        <button id="mobile-app-back-btn" class="mobile-back-btn">
-                            <i data-lucide="arrow-left" style="width: 18px; height: 18px;"></i>
-                        </button>
-                        <span id="mobile-app-title" class="mobile-modal-title">Application</span>
-                        <div style="width: 32px;"></div>
+                <!-- Panel 02: Projects -->
+                <section class="studio-os-panel" id="os-panel-projects" data-panel="projects">
+                    <div class="os-panel-header">
+                        <div class="panel-tag"><span class="accent-cyan">02 //</span> PROJECTS</div>
+                        <h2 class="panel-title">SELECTED BUILDS</h2>
                     </div>
-                    <div id="mobile-app-body-content" class="mobile-modal-body"></div>
-                </div>
+                    <div class="os-projects-grid">
+                        <div class="os-project-item">
+                            <div class="os-proj-top">
+                                <span class="proj-num">PROJECT 01</span>
+                                <span class="proj-badge cyan">INTERACTIVE 3D</span>
+                            </div>
+                            <h3 class="proj-name">AEVONIX — 3D HARDWARE CONTROLLER</h3>
+                            <p class="proj-desc">High-precision real-time Three.js orbital hardware visualizer with interactive component inspections and spatial studio lighting.</p>
+                            <div class="proj-stack-tags">
+                                <span>Three.js</span><span>WebGL</span><span>GSAP</span><span>JavaScript</span>
+                            </div>
+                            <div class="proj-actions">
+                                <a href="https://aevonix-tech.vercel.app/" target="_blank" rel="noopener" class="os-link-btn primary"><i data-lucide="external-link"></i> Launch Project</a>
+                                <a href="https://github.com/ShivamGrover-05/Aevonix-Tech" target="_blank" rel="noopener" class="os-link-btn"><i data-lucide="github"></i> Source</a>
+                            </div>
+                        </div>
 
-            </div>
+                        <div class="os-project-item">
+                            <div class="os-proj-top">
+                                <span class="proj-num">PROJECT 02</span>
+                                <span class="proj-badge green">ED-TECH PLATFORM</span>
+                            </div>
+                            <h3 class="proj-name">COLLEGESPATHSHALA</h3>
+                            <p class="proj-desc">Comprehensive higher education discovery portal with university ranking comparisons, lead intake automation, and dynamic search filters.</p>
+                            <div class="proj-stack-tags">
+                                <span>Next.js</span><span>TypeScript</span><span>Tailwind</span><span>n8n</span>
+                            </div>
+                            <div class="proj-actions">
+                                <a href="https://collegespathshala.com" target="_blank" rel="noopener" class="os-link-btn primary"><i data-lucide="external-link"></i> Visit Live</a>
+                            </div>
+                        </div>
 
+                        <div class="os-project-item">
+                            <div class="os-proj-top">
+                                <span class="proj-num">PROJECT 03</span>
+                                <span class="proj-badge purple">TOURISM EXP</span>
+                            </div>
+                            <h3 class="proj-name">VACATION VISITS</h3>
+                            <p class="proj-desc">Luxury experiential travel booking platform featuring currency converters, customized itineraries, and instant WhatsApp booking triggers.</p>
+                            <div class="proj-stack-tags">
+                                <span>JavaScript</span><span>CSS3</span><span>HTML5</span><span>Webhooks</span>
+                            </div>
+                            <div class="proj-actions">
+                                <a href="https://vacationvisits.in" target="_blank" rel="noopener" class="os-link-btn primary"><i data-lucide="external-link"></i> Visit Live</a>
+                            </div>
+                        </div>
+
+                        <div class="os-project-item">
+                            <div class="os-proj-top">
+                                <span class="proj-num">PROJECT 04</span>
+                                <span class="proj-badge cyan">HOSPITALITY</span>
+                            </div>
+                            <h3 class="proj-name">SAGA HOLIDAYS</h3>
+                            <p class="proj-desc">High-conversion tour operator portal with seamless enquiry capture, interactive itinerary carousels, and responsive mobile design.</p>
+                            <div class="proj-stack-tags">
+                                <span>React</span><span>Vite</span><span>TailwindCSS</span><span>CRM Sync</span>
+                            </div>
+                            <div class="proj-actions">
+                                <a href="https://sagaholidays.in" target="_blank" rel="noopener" class="os-link-btn primary"><i data-lucide="external-link"></i> Visit Live</a>
+                            </div>
+                        </div>
+                    </div>
+                </section>
+
+                <!-- Panel 03: Experiments & Interactive Terminal -->
+                <section class="studio-os-panel" id="os-panel-experiments" data-panel="experiments">
+                    <div class="os-panel-header">
+                        <div class="panel-tag"><span class="accent-cyan">03 //</span> EXPERIMENTS</div>
+                        <h2 class="panel-title">LAB / PROTOTYPES</h2>
+                    </div>
+                    <div class="os-terminal-card">
+                        <div class="os-term-top">
+                            <div class="term-lights">
+                                <span class="light red"></span>
+                                <span class="light yellow"></span>
+                                <span class="light green"></span>
+                            </div>
+                            <div class="term-title">shivam@workstation: ~ (shivam-os-cli)</div>
+                            <div class="term-help-hint">Type <span class="term-hint-cmd">help</span> for commands</div>
+                        </div>
+                        <div class="os-term-output" id="os-term-output">
+                            <div class="term-line welcome"><span class="term-prompt">sys &gt;</span> Shivam Studio OS Terminal initialized. Host: <strong>shivam.dev</strong> [x86_64-webgl]</div>
+                            <div class="term-line"><span class="term-prompt">sys &gt;</span> Available commands: <strong>help</strong>, <strong>whoami</strong>, <strong>projects</strong>, <strong>skills</strong>, <strong>neofetch</strong>, <strong>contact</strong>, <strong>clear</strong></div>
+                        </div>
+                        <form class="os-term-input-row" id="os-term-form">
+                            <span class="term-prompt">shivam@os:~$</span>
+                            <input type="text" id="os-term-input" class="os-term-input" autocomplete="off" spellcheck="false" placeholder="Type command here (e.g. neofetch, help)..." aria-label="Terminal command input">
+                        </form>
+                    </div>
+                </section>
+
+                <!-- Panel 04: Stack -->
+                <section class="studio-os-panel" id="os-panel-stack" data-panel="stack">
+                    <div class="os-panel-header">
+                        <div class="panel-tag"><span class="accent-cyan">04 //</span> STACK</div>
+                        <h2 class="panel-title">TOOLS / TECHNOLOGIES</h2>
+                    </div>
+                    <div class="os-stack-grid">
+                        <div class="os-card">
+                            <div class="card-label"><i data-lucide="code"></i> CORE LANGUAGES</div>
+                            <div class="skill-pills">
+                                <span class="pill">TypeScript</span>
+                                <span class="pill">JavaScript (ESNext)</span>
+                                <span class="pill">Python</span>
+                                <span class="pill">HTML5 / Semantic</span>
+                                <span class="pill">CSS3 / Vanilla</span>
+                                <span class="pill">SQL / PostgreSQL</span>
+                            </div>
+                        </div>
+
+                        <div class="os-card">
+                            <div class="card-label"><i data-lucide="box"></i> 3D & FRONTEND</div>
+                            <div class="skill-pills">
+                                <span class="pill">Three.js</span>
+                                <span class="pill">WebGL / GLSL</span>
+                                <span class="pill">GSAP Animations</span>
+                                <span class="pill">Lenis Scroll</span>
+                                <span class="pill">React / Next.js</span>
+                                <span class="pill">TailwindCSS</span>
+                            </div>
+                        </div>
+
+                        <div class="os-card">
+                            <div class="card-label"><i data-lucide="workflow"></i> REVOPS & AUTOMATION</div>
+                            <div class="skill-pills">
+                                <span class="pill">n8n Automation</span>
+                                <span class="pill">HubSpot CRM Architecture</span>
+                                <span class="pill">Zapier Workflows</span>
+                                <span class="pill">REST API Integrations</span>
+                                <span class="pill">Custom Webhooks</span>
+                                <span class="pill">Lead Routing Engines</span>
+                            </div>
+                        </div>
+
+                        <div class="os-card">
+                            <div class="card-label"><i data-lucide="sliders"></i> 3D RENDERING QUALITY TIER</div>
+                            <p style="font-size: 0.8rem; color: var(--text-muted); margin-bottom: 12px;">Override GPU performance tier in real time:</p>
+                            <div class="tier-buttons-row">
+                                <button class="tier-btn" data-tier="HIGH">HIGH (11k pts)</button>
+                                <button class="tier-btn" data-tier="MEDIUM">MEDIUM (5.5k)</button>
+                                <button class="tier-btn" data-tier="LOW">LOW (2.2k)</button>
+                            </div>
+                        </div>
+                    </div>
+                </section>
+
+                <!-- Panel 05: Contact -->
+                <section class="studio-os-panel" id="os-panel-contact" data-panel="contact">
+                    <div class="os-panel-header">
+                        <div class="panel-tag"><span class="accent-cyan">05 //</span> CONTACT</div>
+                        <h2 class="panel-title">DIRECT TRANSMISSION</h2>
+                    </div>
+                    <div class="os-contact-layout">
+                        <div class="os-card">
+                            <div class="card-label"><i data-lucide="mail"></i> DIRECT EMAIL</div>
+                            <p style="font-size: 0.85rem; color: var(--text-muted); margin-bottom: 14px;">Available for high-impact full-stack development, 3D interactive commissions, and RevOps workflow contracts.</p>
+                            <div class="email-copy-bar">
+                                <code id="os-email-code">codewithshivamdev@gmail.com</code>
+                                <button class="os-copy-btn" id="os-copy-email-btn" title="Copy Email to Clipboard"><i data-lucide="copy"></i> <span>COPY</span></button>
+                            </div>
+                        </div>
+
+                        <div class="os-card">
+                            <div class="card-label"><i data-lucide="globe"></i> NETWORK COORDINATES</div>
+                            <div class="os-social-links">
+                                <a href="https://github.com/ShivamGrover-05" target="_blank" rel="noopener" class="os-link-btn"><i data-lucide="github"></i> GitHub: @ShivamGrover-05</a>
+                                <a href="https://linkedin.com/in/shivamgrover-dev" target="_blank" rel="noopener" class="os-link-btn"><i data-lucide="linkedin"></i> LinkedIn: /in/shivamgrover-dev</a>
+                                <a href="https://cal.com" target="_blank" rel="noopener" class="os-link-btn primary"><i data-lucide="calendar"></i> Schedule 15-Min Intro Call</a>
+                            </div>
+                        </div>
+                    </div>
+                </section>
+            </main>
+
+            <!-- Studio OS Mobile Bottom Navigation Bar -->
+            <footer class="studio-os-mobile-dock" aria-label="Mobile Navigation">
+                <button class="mobile-dock-tab active" data-tab="profile">
+                    <i data-lucide="user"></i>
+                    <span>Profile</span>
+                </button>
+                <button class="mobile-dock-tab" data-tab="projects">
+                    <i data-lucide="folder-git-2"></i>
+                    <span>Projects</span>
+                </button>
+                <button class="mobile-dock-tab" data-tab="experiments">
+                    <i data-lucide="terminal"></i>
+                    <span>Terminal</span>
+                </button>
+                <button class="mobile-dock-tab" data-tab="stack">
+                    <i data-lucide="cpu"></i>
+                    <span>Stack</span>
+                </button>
+                <button class="mobile-dock-tab" data-tab="contact">
+                    <i data-lucide="mail"></i>
+                    <span>Contact</span>
+                </button>
+            </footer>
         </div>
     </div>
 
@@ -407,6 +486,34 @@
                         <div class="thumb-title">Aevonix 3D</div>
                         <div class="thumb-tag">Three.js Controller</div>
                     </a>
+                </div>
+            </div>
+
+            <!-- Floating Holographic Digital Core Interface Overlays (Matching Visual Direction) -->
+            <div class="hero-hologram-hud" aria-hidden="true">
+                <!-- 4 Primary Spherical Orbital Tags -->
+                <div class="holo-tag holo-tag-ideas" data-orbit="ideas">
+                    <span class="holo-bracket">&lt;</span>IDEAS<span class="holo-bracket">/&gt;</span>
+                </div>
+                <div class="holo-tag holo-tag-design" data-orbit="design">
+                    <span class="holo-bracket">&lt;</span>DESIGN<span class="holo-bracket">/&gt;</span>
+                </div>
+                <div class="holo-tag holo-tag-develop" data-orbit="develop">
+                    <span class="holo-bracket">&lt;</span>DEVELOP<span class="holo-bracket">/&gt;</span>
+                </div>
+                <div class="holo-tag holo-tag-deploy" data-orbit="deploy">
+                    <span class="holo-bracket">&lt;</span>DEPLOY<span class="holo-bracket">/&gt;</span>
+                </div>
+
+                <!-- Minimal Decorative Cybernetic Code Badges -->
+                <div class="holo-code-badge holo-badge-future">
+                    <code>const future = create();</code>
+                </div>
+                <div class="holo-code-badge holo-badge-while">
+                    <code>while (ideas) {<br>&nbsp;&nbsp;create();<br>}</code>
+                </div>
+                <div class="holo-code-badge holo-badge-passion">
+                    <code>if (passion) {<br>&nbsp;&nbsp;build();<br>&nbsp;&nbsp;grow();<br>}</code>
                 </div>
             </div>
 
@@ -578,7 +685,7 @@
                 </div>
 
                 <div class="skill-category-card glass-panel">
-                    <div class="category-title"><i data-lucide="git-branch" style="color: #ffbd2e);"></i> Tools & Workflow</div>
+                    <div class="category-title"><i data-lucide="git-branch" style="color: #ffbd2e;"></i> Tools & Workflow</div>
                     <div class="skills-pills">
                         <span class="skill-pill">Git / GitHub</span>
                         <span class="skill-pill">Node.js</span>
@@ -750,55 +857,59 @@
 
     </main>
 
-    <!-- Upgraded Lo-Fi Ambient Audio Player (Auto-Minimizing Floating Widget) -->
-    <div id="audio-widget" class="audio-player-widget minimized" title="Click to expand ambient music controls" aria-label="Ambient Music Player">
-        <!-- Minimized Compact Pill -->
-        <div class="mini-player-bar" id="mini-player-bar">
-            <span class="mini-note-icon">♪</span>
-            <div class="mini-track-info">
-                <span class="mini-label">NOW PLAYING:</span>
-                <span class="mini-track-name" id="mini-track-title">Deep Focus</span>
-            </div>
-            <button class="mini-action-btn" id="mini-play-toggle-btn" aria-label="Play or Pause Ambient Music">
-                <i data-lucide="volume-2" id="mini-volume-icon" style="width: 15px; height: 15px; color: var(--accent-cyan);"></i>
-            </button>
+    <!-- Dynamic Liquid Glass Music Player Capsule -->
+    <aside id="audio-capsule" class="audio-capsule paused" aria-label="Ambient Music Player">
+        <!-- Sound indicator / Animated waveform bars -->
+        <div class="capsule-waveform" id="capsule-waveform" title="Sound Waveform" aria-hidden="true">
+            <span class="wave-bar bar-1"></span>
+            <span class="wave-bar bar-2"></span>
+            <span class="wave-bar bar-3"></span>
+            <span class="wave-bar bar-4"></span>
         </div>
 
-        <!-- Expanded Music Controller Drawer -->
-        <div class="expanded-player-drawer" id="expanded-player-drawer">
-            <div class="player-top-header">
-                <div class="header-left">
-                    <span class="pulse-music-dot"></span>
-                    <span class="player-header-tag">STUDIO AMBIENT LO-FI</span>
-                </div>
-                <button class="player-close-btn" id="minimize-player-btn" aria-label="Minimize Music Player">
-                    <i data-lucide="chevron-down" style="width: 16px; height: 16px;"></i>
-                </button>
+        <!-- Track info: tag, title, genre -->
+        <div class="capsule-track-meta">
+            <div class="capsule-sound-label">
+                <span class="sound-dot"></span>
+                <span>SOUND</span>
             </div>
-            <div class="player-track-details">
-                <div class="player-track-title" id="expanded-track-title">Deep Focus</div>
-                <div class="player-track-genre" id="expanded-track-genre">Vintage Lo-Fi Rhodes</div>
+            <div class="capsule-track-title" id="capsule-track-title">Deep Focus</div>
+            <div class="capsule-track-genre" id="capsule-track-genre">Vintage Lo-Fi Rhodes</div>
+        </div>
+
+        <!-- Progress & Time -->
+        <div class="capsule-timeline">
+            <div class="capsule-progress-track" id="capsule-progress-track" role="progressbar" aria-valuemin="0" aria-valuemax="100" aria-valuenow="0" title="Progress">
+                <div class="capsule-progress-fill" id="capsule-progress-fill"></div>
             </div>
-            <div class="player-progress-bar">
-                <div class="progress-fill" id="player-progress-fill"></div>
+            <div class="capsule-time-display">
+                <span id="capsule-current-time">00:00</span>
+                <span class="time-sep">/</span>
+                <span id="capsule-total-time">00:32</span>
             </div>
-            <div class="player-controls-row">
-                <button class="player-ctrl-btn" id="prev-track-btn" aria-label="Previous Track" title="Previous Track">
-                    <i data-lucide="skip-back" style="width: 16px; height: 16px;"></i>
+        </div>
+
+        <!-- Controls: Prev, Play/Pause, Next, Volume -->
+        <div class="capsule-controls">
+            <button class="capsule-btn" id="capsule-prev-btn" aria-label="Previous Track" title="Previous Track">
+                <i data-lucide="skip-back" style="width: 14px; height: 14px;"></i>
+            </button>
+            <button class="capsule-btn play-btn" id="capsule-play-btn" aria-label="Play or Pause Ambient Music" title="Play Ambient Music">
+                <i data-lucide="play" id="capsule-play-icon" style="width: 15px; height: 15px;"></i>
+            </button>
+            <button class="capsule-btn" id="capsule-next-btn" aria-label="Next Track" title="Next Track">
+                <i data-lucide="skip-forward" style="width: 14px; height: 14px;"></i>
+            </button>
+            <div class="capsule-volume-wrap" id="capsule-volume-wrap">
+                <button class="capsule-btn vol-btn" id="capsule-vol-btn" aria-label="Volume" title="Volume">
+                    <i data-lucide="volume-2" id="capsule-vol-icon" style="width: 14px; height: 14px;"></i>
                 </button>
-                <button class="player-ctrl-btn play-main" id="main-play-btn" aria-label="Play / Pause" title="Play / Pause">
-                    <i data-lucide="play" id="main-play-icon" style="width: 18px; height: 18px;"></i>
-                </button>
-                <button class="player-ctrl-btn" id="next-track-btn" aria-label="Next Track" title="Next Track">
-                    <i data-lucide="skip-forward" style="width: 16px; height: 16px;"></i>
-                </button>
-                <div class="volume-slider-container">
-                    <i data-lucide="volume-1" style="width: 13px; height: 13px; color: var(--text-muted);"></i>
-                    <input type="range" id="volume-slider" min="0" max="100" value="30" class="vol-range" aria-label="Music Volume Slider">
+                <div class="capsule-vol-slider-popover" id="capsule-vol-slider-popover">
+                    <input type="range" id="capsule-volume-slider" min="0" max="100" value="30" class="capsule-vol-slider" aria-label="Volume Slider">
                 </div>
             </div>
         </div>
-    </div>
+    </aside>
 
     <!-- Autoplay Prompt Pill (Visible only if browser blocked initial autoplay) -->
     <div id="autoplay-prompt" class="autoplay-pill" style="display: none;">

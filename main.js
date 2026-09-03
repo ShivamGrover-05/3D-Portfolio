@@ -37,6 +37,21 @@ const triggerHaptic = (type = 'button') => {
 window.triggerHaptic = triggerHaptic;
 
 document.addEventListener('DOMContentLoaded', () => {
+    // Session progression system
+    const registerSessionExplored = (sectionTitle) => {
+        try {
+            let explored = JSON.parse(localStorage.getItem('portfolio_visited_sections')) || [];
+            if (!explored.includes(sectionTitle)) {
+                explored.push(sectionTitle);
+                localStorage.setItem('portfolio_visited_sections', JSON.stringify(explored));
+                window.dispatchEvent(new CustomEvent('session_progress_updated', { detail: { explored } }));
+            }
+        } catch (e) {
+            console.warn('Session progression storage failed:', e);
+        }
+    };
+    window.registerSessionExplored = registerSessionExplored;
+
     // 1. Initialize Lenis Smooth Scrolling Engine (Responsive & non-delayed on mobile)
     let lenis = null;
     const isTouch = ('ontouchstart' in window) || (navigator.maxTouchPoints > 0);
@@ -108,13 +123,16 @@ document.addEventListener('DOMContentLoaded', () => {
 
         triggerHaptic('project');
 
+        // Track project exploration in session
+        registerSessionExplored(p.title);
+
         // Update Counter
         if (indexCounter) {
             indexCounter.textContent = `${p.number} / 0${projects.length}`;
         }
 
-        // Update Switcher Active State
-        switcherButtons.forEach((btn, idx) => {
+        // Update Switcher Active State dynamically
+        document.querySelectorAll('.switcher-num-btn').forEach((btn, idx) => {
             btn.classList.toggle('active', idx === currentProjectIndex);
         });
 
@@ -295,6 +313,10 @@ document.addEventListener('DOMContentLoaded', () => {
                 navLinks.forEach(link => {
                     link.classList.toggle('active', link.getAttribute('data-section') === id);
                 });
+
+                // Track section exploration in session
+                const capitalizedId = id.charAt(0).toUpperCase() + id.slice(1);
+                registerSessionExplored(capitalizedId);
             }
         });
     };
@@ -352,181 +374,328 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     }
 
-    // 8. Interactive Studio OS Trigger
+    // 8. Intentional Tap vs Scroll Gesture Discrimination Utility
+    const attachTouchSafeClick = (element, callback) => {
+        if (!element) return;
+        let startX = 0;
+        let startY = 0;
+        let hasMoved = false;
+
+        element.addEventListener('touchstart', (e) => {
+            if (e.touches.length > 0) {
+                startX = e.touches[0].clientX;
+                startY = e.touches[0].clientY;
+                hasMoved = false;
+            }
+        }, { passive: true });
+
+        element.addEventListener('touchmove', (e) => {
+            if (e.touches.length > 0) {
+                const dx = Math.abs(e.touches[0].clientX - startX);
+                const dy = Math.abs(e.touches[0].clientY - startY);
+                if (dx > 8 || dy > 8) {
+                    hasMoved = true;
+                }
+            }
+        }, { passive: true });
+
+        element.addEventListener('click', (e) => {
+            if (hasMoved) {
+                e.preventDefault();
+                e.stopImmediatePropagation();
+                return;
+            }
+            callback(e);
+        });
+    };
+
+    // Dedicated Interactive Studio OS Triggers (Protected with Gesture Discrimination)
     const enterStudioTriggers = document.querySelectorAll('.enter-studio-trigger');
     enterStudioTriggers.forEach(btn => {
-        btn.addEventListener('click', (e) => {
+        attachTouchSafeClick(btn, (e) => {
             e.preventDefault();
+            e.stopPropagation();
             triggerHaptic('action');
             closeMobileNav();
-            if (window.virtualOS) {
-                window.virtualOS.bootOS();
+            if (window.virtualOS && typeof window.virtualOS.enterComputer === 'function') {
+                window.virtualOS.enterComputer();
             }
         });
     });
 
-    // 9. Upgraded Ambient Music System & Auto-Minimizing Floating Widget
-    const audioWidget = document.getElementById('audio-widget');
-    const miniPlayerBar = document.getElementById('mini-player-bar');
-    const miniTrackTitle = document.getElementById('mini-track-title');
-    const miniPlayToggleBtn = document.getElementById('mini-play-toggle-btn');
-    const miniVolumeIcon = document.getElementById('mini-volume-icon');
-    const minimizePlayerBtn = document.getElementById('minimize-player-btn');
-    const expandedTrackTitle = document.getElementById('expanded-track-title');
-    const expandedTrackGenre = document.getElementById('expanded-track-genre');
-    const mainPlayBtn = document.getElementById('main-play-btn');
-    const mainPlayIcon = document.getElementById('main-play-icon');
-    const prevTrackBtn = document.getElementById('prev-track-btn');
-    const nextTrackBtn = document.getElementById('next-track-btn');
-    const volumeSlider = document.getElementById('volume-slider');
-    const autoplayPrompt = document.getElementById('autoplay-prompt');
+    // Interactive Holographic HUD Navigation Tags (Safe Section Smooth Scrolling)
+    const holoTagMap = {
+        'ideas': 'about',
+        'design': 'projects',
+        'develop': 'skills',
+        'deploy': 'experience'
+    };
+    document.querySelectorAll('.holo-tag').forEach(tag => {
+        const orbitKey = tag.getAttribute('data-orbit');
+        const targetId = holoTagMap[orbitKey];
+        if (targetId) {
+            tag.style.cursor = 'pointer';
+            tag.style.pointerEvents = 'auto';
+            attachTouchSafeClick(tag, (e) => {
+                e.preventDefault();
+                e.stopPropagation();
+                triggerHaptic('button');
+                const targetEl = document.getElementById(targetId);
+                if (targetEl) {
+                    if (window.lenis) {
+                        window.lenis.scrollTo(targetEl, { offset: -60, duration: 1.2 });
+                    } else {
+                        targetEl.scrollIntoView({ behavior: 'smooth' });
+                    }
+                }
+            });
+        }
+    });
 
-    let autoMinimizeTimeout = null;
+    // 9. Dynamic Liquid Glass Audio Capsule & True Clock Synchronization
+    const audioCapsule = document.getElementById('audio-capsule');
+    const capsuleTrackTitle = document.getElementById('capsule-track-title');
+    const capsuleTrackGenre = document.getElementById('capsule-track-genre');
+    const capsuleProgressFill = document.getElementById('capsule-progress-fill');
+    const capsuleProgressTrack = document.getElementById('capsule-progress-track');
+    const capsuleCurrentTime = document.getElementById('capsule-current-time');
+    const capsuleTotalTime = document.getElementById('capsule-total-time');
+    const capsulePlayBtn = document.getElementById('capsule-play-btn');
+    const capsulePrevBtn = document.getElementById('capsule-prev-btn');
+    const capsuleNextBtn = document.getElementById('capsule-next-btn');
+    const capsuleVolBtn = document.getElementById('capsule-vol-btn');
+    const capsuleVolIcon = document.getElementById('capsule-vol-icon');
+    const capsuleVolPopover = document.getElementById('capsule-vol-slider-popover');
+    const capsuleVolumeSlider = document.getElementById('capsule-volume-slider');
 
-    const scheduleAutoMinimize = (delay = 4000) => {
-        if (autoMinimizeTimeout) clearTimeout(autoMinimizeTimeout);
-        autoMinimizeTimeout = setTimeout(() => {
-            if (audioWidget && audioWidget.classList.contains('expanded')) {
-                audioWidget.classList.remove('expanded');
-                audioWidget.classList.add('minimized');
+    let progressRafId = null;
+
+    const formatTime = (seconds) => {
+        const s = Math.max(0, Math.floor(seconds || 0));
+        const m = Math.floor(s / 60);
+        const rem = s % 60;
+        return `${String(m).padStart(2, '0')}:${String(rem).padStart(2, '0')}`;
+    };
+
+    const updateProgressFrame = () => {
+        if (!window.lofiAudio || window.lofiAudio.paused || window.lofiAudio.ended) {
+            if (progressRafId) {
+                cancelAnimationFrame(progressRafId);
+                progressRafId = null;
             }
-        }, delay);
+            return;
+        }
+
+        const curr = window.lofiAudio.currentTime;
+        const dur = window.lofiAudio.duration || 32;
+        const pct = Math.min(100, Math.max(0, (curr / dur) * 100));
+
+        if (capsuleProgressFill) {
+            capsuleProgressFill.style.width = `${pct}%`;
+        }
+        if (capsuleCurrentTime) {
+            capsuleCurrentTime.textContent = formatTime(curr);
+        }
+        if (capsuleProgressTrack) {
+            capsuleProgressTrack.setAttribute('aria-valuenow', Math.round(pct));
+        }
+
+        progressRafId = requestAnimationFrame(updateProgressFrame);
     };
 
-    const expandPlayer = () => {
-        if (!audioWidget) return;
-        audioWidget.classList.remove('minimized');
-        audioWidget.classList.add('expanded');
-        scheduleAutoMinimize(5000);
+    const startProgressLoop = () => {
+        if (progressRafId) {
+            cancelAnimationFrame(progressRafId);
+            progressRafId = null;
+        }
+        progressRafId = requestAnimationFrame(updateProgressFrame);
     };
 
-    const minimizePlayer = () => {
-        if (!audioWidget) return;
-        if (autoMinimizeTimeout) clearTimeout(autoMinimizeTimeout);
-        audioWidget.classList.remove('expanded');
-        audioWidget.classList.add('minimized');
+    const stopProgressLoop = () => {
+        if (progressRafId) {
+            cancelAnimationFrame(progressRafId);
+            progressRafId = null;
+        }
+        // Sync static state exactly once upon stopping
+        if (window.lofiAudio) {
+            const curr = window.lofiAudio.currentTime;
+            const dur = window.lofiAudio.duration || 32;
+            const pct = Math.min(100, Math.max(0, (curr / dur) * 100));
+            if (capsuleProgressFill) capsuleProgressFill.style.width = `${pct}%`;
+            if (capsuleCurrentTime) capsuleCurrentTime.textContent = formatTime(curr);
+        }
     };
 
-    const syncAudioUI = (track) => {
+    const syncCapsuleMeta = (track) => {
         if (!track && window.lofiAudio) {
             track = window.lofiAudio.getCurrentTrack();
         }
         if (!track) return;
 
-        if (miniTrackTitle) miniTrackTitle.textContent = track.name;
-        if (expandedTrackTitle) expandedTrackTitle.textContent = track.name;
-        if (expandedTrackGenre) expandedTrackGenre.textContent = track.genre;
+        if (capsuleTrackTitle) capsuleTrackTitle.textContent = track.name;
+        if (capsuleTrackGenre) capsuleTrackGenre.textContent = track.genre;
+        if (capsuleTotalTime) capsuleTotalTime.textContent = formatTime(window.lofiAudio ? window.lofiAudio.duration : 32);
+    };
 
-        const isPlaying = window.lofiAudio ? window.lofiAudio.isPlaying : false;
-
-        const playBtnEl = document.getElementById('main-play-btn');
-        if (playBtnEl) {
-            playBtnEl.innerHTML = isPlaying 
-                ? '<i data-lucide="pause" style="width: 20px; height: 20px;"></i>' 
-                : '<i data-lucide="play" style="width: 20px; height: 20px; margin-left: 2px;"></i>';
-            playBtnEl.setAttribute('title', isPlaying ? 'Pause Music' : 'Play Ambient Music / Enable Sound');
-            playBtnEl.setAttribute('aria-label', isPlaying ? 'Pause Music' : 'Play Ambient Music / Enable Sound');
+    const updatePlaybackUI = (isPlaying) => {
+        if (audioCapsule) {
+            if (isPlaying) {
+                audioCapsule.classList.remove('paused');
+                audioCapsule.classList.add('playing');
+            } else {
+                audioCapsule.classList.remove('playing');
+                audioCapsule.classList.add('paused');
+            }
         }
 
-        const miniToggleEl = document.getElementById('mini-play-toggle-btn');
-        if (miniToggleEl) {
-            miniToggleEl.innerHTML = isPlaying
-                ? '<i data-lucide="volume-2" style="width: 15px; height: 15px; color: var(--accent-green);"></i>'
-                : '<i data-lucide="volume-x" style="width: 15px; height: 15px; color: var(--text-dim);"></i>';
-            miniToggleEl.setAttribute('title', isPlaying ? 'Mute Ambient Music' : 'Unmute / Enable Sound');
-            miniToggleEl.setAttribute('aria-label', isPlaying ? 'Mute Ambient Music' : 'Unmute / Enable Sound');
+        if (capsulePlayBtn) {
+            capsulePlayBtn.innerHTML = isPlaying
+                ? '<i data-lucide="pause" style="width: 15px; height: 15px;"></i>'
+                : '<i data-lucide="play" style="width: 15px; height: 15px; margin-left: 1px;"></i>';
+            capsulePlayBtn.setAttribute('title', isPlaying ? 'Pause Ambient Sound' : 'Play Ambient Sound');
+            capsulePlayBtn.setAttribute('aria-label', isPlaying ? 'Pause Ambient Sound' : 'Play Ambient Sound');
+        }
+
+        if (isPlaying) {
+            startProgressLoop();
+        } else {
+            stopProgressLoop();
         }
 
         if (window.lucide) window.lucide.createIcons();
     };
 
+    if (window.lofiAudio) {
+        window.lofiAudio.addEventListener('play', () => {
+            updatePlaybackUI(true);
+        });
+
+        window.lofiAudio.addEventListener('pause', () => {
+            updatePlaybackUI(false);
+        });
+
+        window.lofiAudio.addEventListener('ended', () => {
+            stopProgressLoop();
+            if (capsuleProgressFill) capsuleProgressFill.style.width = '100%';
+            updatePlaybackUI(false);
+        });
+
+        window.lofiAudio.addEventListener('timeupdate', () => {
+            if (window.lofiAudio.paused) {
+                const curr = window.lofiAudio.currentTime;
+                const dur = window.lofiAudio.duration || 32;
+                const pct = Math.min(100, Math.max(0, (curr / dur) * 100));
+                if (capsuleProgressFill) capsuleProgressFill.style.width = `${pct}%`;
+                if (capsuleCurrentTime) capsuleCurrentTime.textContent = formatTime(curr);
+            }
+        });
+
+        window.lofiAudio.addEventListener('loadedmetadata', () => {
+            syncCapsuleMeta(window.lofiAudio.getCurrentTrack());
+        });
+
+        window.lofiAudio.addEventListener('volumechange', () => {
+            const vol = window.lofiAudio.volumeLevel;
+            if (capsuleVolumeSlider) capsuleVolumeSlider.value = Math.round(vol * 100);
+            if (capsuleVolIcon) {
+                const iconName = vol === 0 ? 'volume-x' : (vol < 0.5 ? 'volume-1' : 'volume-2');
+                capsuleVolIcon.setAttribute('data-lucide', iconName);
+                if (window.lucide) window.lucide.createIcons();
+            }
+        });
+    }
+
     window.onAmbientTrackChange = (track) => {
-        syncAudioUI(track);
-        expandPlayer();
+        syncCapsuleMeta(track);
     };
-
-    if (miniPlayerBar) {
-        miniPlayerBar.addEventListener('click', (e) => {
-            e.stopPropagation();
-            triggerHaptic('button');
-            expandPlayer();
-        });
-    }
-
-    if (minimizePlayerBtn) {
-        minimizePlayerBtn.addEventListener('click', (e) => {
-            e.stopPropagation();
-            triggerHaptic('button');
-            minimizePlayer();
-        });
-    }
 
     const togglePlayback = () => {
         triggerHaptic('button');
         if (window.lofiAudio) {
-            const isPlaying = window.lofiAudio.toggle();
-            syncAudioUI(window.lofiAudio.getCurrentTrack());
-            if (isPlaying) {
-                scheduleAutoMinimize(3500);
-            }
+            window.lofiAudio.toggle();
         }
     };
 
-    if (mainPlayBtn) {
-        mainPlayBtn.addEventListener('click', (e) => {
+    if (capsulePlayBtn) {
+        attachTouchSafeClick(capsulePlayBtn, (e) => {
             e.stopPropagation();
             togglePlayback();
         });
     }
 
-    if (miniPlayToggleBtn) {
-        miniPlayToggleBtn.addEventListener('click', (e) => {
-            e.stopPropagation();
-            togglePlayback();
-        });
-    }
-
-    if (prevTrackBtn) {
-        prevTrackBtn.addEventListener('click', (e) => {
+    if (capsulePrevBtn) {
+        attachTouchSafeClick(capsulePrevBtn, (e) => {
             e.stopPropagation();
             triggerHaptic('button');
             if (window.lofiAudio) {
                 window.lofiAudio.prevTrack();
-                scheduleAutoMinimize(4000);
             }
         });
     }
 
-    if (nextTrackBtn) {
-        nextTrackBtn.addEventListener('click', (e) => {
+    if (capsuleNextBtn) {
+        attachTouchSafeClick(capsuleNextBtn, (e) => {
             e.stopPropagation();
             triggerHaptic('button');
             if (window.lofiAudio) {
                 window.lofiAudio.nextTrack();
-                scheduleAutoMinimize(4000);
             }
         });
     }
 
-    if (volumeSlider) {
-        // Set initial slider position
-        if (window.lofiAudio) {
-            volumeSlider.value = Math.round(window.lofiAudio.getVolume() * 100);
-        }
+    // Click to seek on progress line
+    if (capsuleProgressTrack) {
+        attachTouchSafeClick(capsuleProgressTrack, (e) => {
+            e.stopPropagation();
+            if (!window.lofiAudio) return;
+            const rect = capsuleProgressTrack.getBoundingClientRect();
+            const clickX = e.clientX - rect.left;
+            const pct = Math.max(0, Math.min(1, clickX / rect.width));
+            window.lofiAudio.currentTime = pct * (window.lofiAudio.duration || 32);
+        });
+    }
 
-        volumeSlider.addEventListener('input', (e) => {
+    // Volume Slider & Mute Toggle
+    let volTimeout = null;
+    if (capsuleVolBtn) {
+        attachTouchSafeClick(capsuleVolBtn, (e) => {
+            e.stopPropagation();
+            if (capsuleVolPopover) {
+                const isOpen = capsuleVolPopover.classList.contains('open');
+                if (isOpen) {
+                    capsuleVolPopover.classList.remove('open');
+                } else {
+                    capsuleVolPopover.classList.add('open');
+                    if (volTimeout) clearTimeout(volTimeout);
+                    volTimeout = setTimeout(() => {
+                        if (capsuleVolPopover) capsuleVolPopover.classList.remove('open');
+                    }, 4000);
+                }
+            }
+        });
+    }
+
+    if (capsuleVolumeSlider) {
+        if (window.lofiAudio) {
+            capsuleVolumeSlider.value = Math.round(window.lofiAudio.volumeLevel * 100);
+        }
+        capsuleVolumeSlider.addEventListener('input', (e) => {
             e.stopPropagation();
             const val = parseInt(e.target.value, 10) / 100;
             if (window.lofiAudio) {
                 window.lofiAudio.setVolume(val);
             }
-            scheduleAutoMinimize(4000);
+            if (volTimeout) clearTimeout(volTimeout);
+            volTimeout = setTimeout(() => {
+                if (capsuleVolPopover) capsuleVolPopover.classList.remove('open');
+            }, 3000);
         });
     }
 
-    // Initialize Audio Player UI in Muted/Stopped State (Explicit User-Triggered Sound)
+    // Initialize Audio Capsule Meta
     if (window.lofiAudio) {
-        syncAudioUI(window.lofiAudio.getCurrentTrack());
+        syncCapsuleMeta(window.lofiAudio.getCurrentTrack());
+        updatePlaybackUI(window.lofiAudio.isPlaying);
     }
 
     // 10. Contact Form Submissions (Vercel Serverless Function POST /api/contact)

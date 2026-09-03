@@ -1,797 +1,379 @@
-// SHIVAM OS - Simulated Virtual Desktop & Dedicated Mobile Workstation Engine
+// =========================================================================
+// STUDIO OS — Redesigned Futuristic Creative Operating System v2.5
+// Clean, Editorial, High-Performance Interactive Workstation Layer
+// =========================================================================
+
 class VirtualComputerOS {
     constructor() {
         this.isActive = false;
-        this.isBooting = false;
-        this.windows = {};
-        this.focusedWindow = null;
-        this.nextZIndex = 100;
+        this.activeTab = 'profile';
         this.terminalHistory = [];
-        this.terminalHistoryIndex = -1;
-        this.previousCameraState = null;
-        this.activeMobileApp = null;
-
-        this.apps = {
-            projects: { title: "Projects Explorer", icon: "folder-git-2", width: 620, height: 420 },
-            browser: { title: "ShivamBrowser — shivam.dev", icon: "globe", width: 640, height: 440 },
-            terminal: { title: "Terminal — shivam@workstation", icon: "terminal", width: 560, height: 360 },
-            mycomputer: { title: "My Computer — /workspace", icon: "hard-drive", width: 540, height: 360 },
-            resume: { title: "Resume Viewer — Shivam_Grover_CV", icon: "file-text", width: 520, height: 440 },
-            about: { title: "About Me — System Profile", icon: "user", width: 500, height: 380 },
-            settings: { title: "Studio OS Settings", icon: "sliders", width: 480, height: 380 },
-            contact: { title: "Direct Communicator", icon: "mail", width: 480, height: 400 }
-        };
-    }
-
-    isMobileView() {
-        return window.innerWidth < 768 || window.innerHeight < 550;
+        this.historyIndex = -1;
+        this.fpsWatcherInterval = null;
     }
 
     init() {
-        this.setupEventListeners();
-        this.updateClock();
-        setInterval(() => this.updateClock(), 1000);
-        window.addEventListener('resize', () => {
-            if (this.isActive && this.isMobileView()) {
-                this.syncMobileOSState();
-            }
-        });
+        this.setupTabNavigation();
+        this.setupCloseTriggers();
+        this.setupTerminal();
+        this.setupTierControls();
+        this.setupEmailCopy();
+        this.setupKeyboardShortcuts();
     }
 
-    setupEventListeners() {
-        // Desktop App Icons click
-        document.querySelectorAll('.desktop-icon').forEach(icon => {
-            icon.addEventListener('click', () => {
-                const appId = icon.getAttribute('data-app');
-                if (window.triggerHaptic) window.triggerHaptic('button');
-                this.openApp(appId);
-            });
-        });
-
-        // Mobile App Grid / Dock Items
-        document.querySelectorAll('.mobile-os-app-item, .mobile-dock-btn').forEach(btn => {
-            btn.addEventListener('click', (e) => {
-                const appId = btn.getAttribute('data-app');
-                if (window.triggerHaptic) window.triggerHaptic('button');
-                if (appId === 'home') {
-                    this.closeMobileApp();
-                } else if (appId) {
-                    this.openApp(appId);
-                }
-            });
-        });
-
-        // Exit Computer Button
-        const exitBtns = document.querySelectorAll('#exit-computer-btn, #mobile-os-exit-btn');
-        exitBtns.forEach(btn => {
-            btn.addEventListener('click', () => {
-                this.exitComputer();
-            });
-        });
-
-        // Mobile Back to OS home button
-        const mobileBackBtn = document.getElementById('mobile-app-back-btn');
-        if (mobileBackBtn) {
-            mobileBackBtn.addEventListener('click', () => {
-                if (window.triggerHaptic) window.triggerHaptic('button');
-                this.closeMobileApp();
-            });
-        }
-
-        // Global Escape key
-        window.addEventListener('keydown', (e) => {
-            if (e.key === 'Escape' && this.isActive) {
-                if (this.isMobileView()) {
-                    if (this.activeMobileApp) {
-                        this.closeMobileApp();
-                    } else {
-                        this.exitComputer();
-                    }
-                    return;
-                }
-
-                const openWinKeys = Object.keys(this.windows).filter(k => this.windows[k].isOpen);
-                if (openWinKeys.length > 0) {
-                    this.closeWindow(this.focusedWindow || openWinKeys[openWinKeys.length - 1]);
-                } else {
-                    this.exitComputer();
-                }
-            }
-        });
-
-        // Enter Studio triggers
-        const enterStudioBtns = document.querySelectorAll('.enter-studio-trigger');
-        enterStudioBtns.forEach(btn => {
+    setupTabNavigation() {
+        // Desktop / Tablet Nav Tabs
+        const navTabs = document.querySelectorAll('.os-nav-tab');
+        navTabs.forEach(btn => {
             btn.addEventListener('click', (e) => {
                 e.preventDefault();
-                this.enterComputer();
+                const tab = btn.getAttribute('data-tab');
+                if (tab) this.switchTab(tab);
             });
         });
 
-        // Idle screen click
-        const idleScreen = document.getElementById('os-idle-screen');
-        if (idleScreen) {
-            idleScreen.addEventListener('click', () => {
-                this.enterComputer();
+        // Mobile Bottom Dock Tabs
+        const mobileTabs = document.querySelectorAll('.mobile-dock-tab');
+        mobileTabs.forEach(btn => {
+            btn.addEventListener('click', (e) => {
+                e.preventDefault();
+                const tab = btn.getAttribute('data-tab');
+                if (tab) this.switchTab(tab);
+            });
+        });
+    }
+
+    setupCloseTriggers() {
+        const exitBtn = document.getElementById('exit-computer-btn');
+        if (exitBtn) {
+            exitBtn.addEventListener('click', (e) => {
+                e.preventDefault();
+                this.exitComputer();
             });
         }
     }
 
-    updateClock() {
-        const now = new Date();
-        const hours = String(now.getHours()).padStart(2, '0');
-        const mins = String(now.getMinutes()).padStart(2, '0');
-        const timeStr = `${hours}:${mins}`;
+    setupKeyboardShortcuts() {
+        window.addEventListener('keydown', (e) => {
+            if (!this.isActive) return;
 
-        const desktopClock = document.getElementById('os-taskbar-clock');
-        if (desktopClock) desktopClock.textContent = timeStr;
+            // Escape key closes Studio OS immediately
+            if (e.key === 'Escape') {
+                e.preventDefault();
+                this.exitComputer();
+                return;
+            }
 
-        const mobileClock = document.getElementById('mobile-os-clock');
-        if (mobileClock) mobileClock.textContent = timeStr;
+            // Numeric keys 1-5 switch tabs when not typing in the terminal input
+            const activeTag = document.activeElement ? document.activeElement.tagName.toLowerCase() : '';
+            if (activeTag !== 'input' && activeTag !== 'textarea') {
+                const numKey = parseInt(e.key, 10);
+                const tabKeys = ['profile', 'projects', 'experiments', 'stack', 'contact'];
+                if (numKey >= 1 && numKey <= 5) {
+                    e.preventDefault();
+                    this.switchTab(tabKeys[numKey - 1]);
+                }
+            }
+        });
+    }
+
+    switchTab(tabKey) {
+        if (!tabKey) return;
+        this.activeTab = tabKey;
+        this.triggerHaptic('button');
+
+        // Update Desktop Tabs
+        document.querySelectorAll('.os-nav-tab').forEach(t => {
+            if (t.getAttribute('data-tab') === tabKey) {
+                t.classList.add('active');
+            } else {
+                t.classList.remove('active');
+            }
+        });
+
+        // Update Mobile Dock Tabs
+        document.querySelectorAll('.mobile-dock-tab').forEach(t => {
+            if (t.getAttribute('data-tab') === tabKey) {
+                t.classList.add('active');
+            } else {
+                t.classList.remove('active');
+            }
+        });
+
+        // Switch Panels with Smooth Transition
+        document.querySelectorAll('.studio-os-panel').forEach(p => {
+            if (p.getAttribute('data-panel') === tabKey) {
+                p.classList.add('active');
+            } else {
+                p.classList.remove('active');
+            }
+        });
+
+        // Focus terminal input if switched to experiments
+        if (tabKey === 'experiments') {
+            const input = document.getElementById('os-term-input');
+            if (input) setTimeout(() => input.focus(), 100);
+        }
+
+        if (window.lucide && typeof window.lucide.createIcons === 'function') {
+            window.lucide.createIcons();
+        }
     }
 
     enterComputer() {
-        if (this.isActive || this.isBooting) return;
+        if (this.isActive) return;
+        this.isActive = true;
+        this.triggerHaptic('action');
 
-        if (window.triggerHaptic) window.triggerHaptic('action');
-
-        const computerLayer = document.getElementById('virtual-computer-layer');
-        const bootScreen = document.getElementById('os-boot-screen');
-        const desktopScreen = document.getElementById('os-desktop-screen');
-        const mobileOsScreen = document.getElementById('os-mobile-workstation');
-        const idleScreen = document.getElementById('os-idle-screen');
-        const desktopGrid = document.querySelector('.os-desktop-grid');
-        const taskbar = document.querySelector('.os-taskbar');
-        const windowsArea = document.getElementById('os-windows-container');
-
-        if (!computerLayer) return;
-
-        this.isBooting = true;
-        computerLayer.classList.add('active');
-
-        // Move 3D camera to close-up monitor view & disable desk orbit
-        if (window.studioScene && typeof window.studioScene.focusOnMonitor === 'function') {
-            window.studioScene.focusOnMonitor();
+        const overlay = document.getElementById('virtual-computer-layer');
+        if (overlay) {
+            overlay.classList.add('active');
         }
 
-        if (idleScreen) idleScreen.style.opacity = '0';
+        // Lock background scroll to prevent jitter
+        document.body.classList.add('studio-os-open');
+        document.body.style.overflow = 'hidden';
+        if (window.lenis && typeof window.lenis.stop === 'function') {
+            window.lenis.stop();
+        }
 
-        const isMobile = this.isMobileView();
+        // Camera director transition to Studio preset
+        if (window.studioScene && window.studioScene.cameraDirector) {
+            window.studioScene.cameraDirector.transitionTo('STUDIO', null, 0.85);
+        }
 
-        setTimeout(() => {
-            if (idleScreen) idleScreen.style.display = 'none';
+        // Start telemetry watcher
+        this.startTelemetry();
 
-            if (bootScreen) {
-                bootScreen.style.display = 'flex';
-                if (desktopGrid) desktopGrid.style.opacity = '0';
-                if (taskbar) taskbar.style.opacity = '0';
-                if (windowsArea) windowsArea.style.opacity = '0';
-            }
-
-            setTimeout(() => {
-                if (bootScreen) bootScreen.style.display = 'none';
-
-                if (isMobile) {
-                    if (desktopScreen) desktopScreen.style.display = 'none';
-                    if (mobileOsScreen) {
-                        mobileOsScreen.style.display = 'flex';
-                        mobileOsScreen.style.opacity = '1';
-                    }
-                } else {
-                    if (mobileOsScreen) mobileOsScreen.style.display = 'none';
-                    if (desktopScreen) {
-                        desktopScreen.style.display = 'flex';
-                        if (window.gsap) {
-                            const tl = window.gsap.timeline();
-                            tl.to(desktopGrid, { opacity: 1, duration: 0.3, ease: 'power2.out' }, 0);
-                            tl.to(taskbar, { opacity: 1, duration: 0.25, ease: 'power2.out' }, 0.1);
-                            tl.to(windowsArea, { opacity: 1, duration: 0.2 }, 0.15);
-                        } else {
-                            if (desktopGrid) desktopGrid.style.opacity = '1';
-                            if (taskbar) taskbar.style.opacity = '1';
-                            if (windowsArea) windowsArea.style.opacity = '1';
-                        }
-                    }
-                }
-
-                this.isBooting = false;
-                this.isActive = true;
-                if (window.lucide) window.lucide.createIcons();
-            }, 600);
-        }, 200);
+        // Refresh icons
+        if (window.lucide && typeof window.lucide.createIcons === 'function') {
+            window.lucide.createIcons();
+        }
     }
 
     exitComputer() {
-        if (!this.isActive && !this.isBooting) return;
-
-        if (window.triggerHaptic) window.triggerHaptic('button');
-
-        const computerLayer = document.getElementById('virtual-computer-layer');
-        const idleScreen = document.getElementById('os-idle-screen');
-        const desktopGrid = document.querySelector('.os-desktop-grid');
-        const taskbar = document.querySelector('.os-taskbar');
-        const mobileOsScreen = document.getElementById('os-mobile-workstation');
-
-        // Close all open windows and free DOM nodes
-        Object.keys(this.windows).forEach(appId => {
-            if (this.windows[appId] && this.windows[appId].element) {
-                this.windows[appId].element.remove();
-            }
-        });
-        this.windows = {};
-        this.focusedWindow = null;
-        this.closeMobileApp();
-
-        const taskbarTasks = document.getElementById('os-taskbar-tasks');
-        if (taskbarTasks) taskbarTasks.innerHTML = '';
-
-        if (window.gsap) {
-            window.gsap.to([desktopGrid, taskbar, mobileOsScreen], {
-                opacity: 0,
-                duration: 0.2,
-                onComplete: () => {
-                    if (idleScreen) {
-                        idleScreen.style.display = 'flex';
-                        idleScreen.style.opacity = '1';
-                    }
-                    if (mobileOsScreen) mobileOsScreen.style.display = 'none';
-                    if (computerLayer) computerLayer.classList.remove('active');
-                }
-            });
-        } else {
-            if (desktopGrid) desktopGrid.style.opacity = '0';
-            if (taskbar) taskbar.style.opacity = '0';
-            if (idleScreen) {
-                idleScreen.style.display = 'flex';
-                idleScreen.style.opacity = '1';
-            }
-            if (mobileOsScreen) mobileOsScreen.style.display = 'none';
-            if (computerLayer) computerLayer.classList.remove('active');
-        }
-
+        if (!this.isActive) return;
         this.isActive = false;
-        this.isBooting = false;
+        this.triggerHaptic('button');
 
-        // Restore normal 3D camera
-        if (window.studioScene && typeof window.studioScene.exitMonitorFocus === 'function') {
-            window.studioScene.exitMonitorFocus();
+        const overlay = document.getElementById('virtual-computer-layer');
+        if (overlay) {
+            overlay.classList.remove('active');
+        }
+
+        // Restore page scrolling cleanly
+        document.body.classList.remove('studio-os-open');
+        document.body.style.overflow = '';
+        if (window.lenis && typeof window.lenis.start === 'function') {
+            window.lenis.start();
+        }
+
+        // Camera director returns to current section view
+        if (window.studioScene && typeof window.studioScene.resetDeskView === 'function') {
+            window.studioScene.resetDeskView();
+        }
+
+        if (this.fpsWatcherInterval) {
+            clearInterval(this.fpsWatcherInterval);
+            this.fpsWatcherInterval = null;
         }
     }
 
-    openApp(appId) {
-        if (!this.apps[appId]) return;
-        const config = this.apps[appId];
-
-        if (window.triggerHaptic) window.triggerHaptic('hotspot');
-
-        // Mobile Mode: Render full-screen responsive app view
-        if (this.isMobileView()) {
-            this.openMobileApp(appId);
-            return;
+    startTelemetry() {
+        const gpuStatus = document.getElementById('os-gpu-status');
+        if (gpuStatus && window.studioScene) {
+            const tier = window.studioScene.tier || 'HIGH';
+            const fps = window.studioScene.fpsTracker ? window.studioScene.fpsTracker.currentFps : 60;
+            gpuStatus.innerHTML = `<i data-lucide="cpu"></i> <span>${tier} • ${fps} FPS</span>`;
+            if (window.lucide) window.lucide.createIcons();
         }
 
-        // Desktop Window Mode
-        if (this.windows[appId]) {
-            const win = this.windows[appId].element;
-            win.style.display = 'flex';
-            this.windows[appId].isOpen = true;
-            this.focusWindow(appId);
-            return;
-        }
-
-        const winEl = document.createElement('div');
-        winEl.className = 'os-window';
-        winEl.id = `os-window-${appId}`;
-        winEl.style.width = `${Math.min(config.width, window.innerWidth * 0.9)}px`;
-        winEl.style.height = `${Math.min(config.height, window.innerHeight * 0.75)}px`;
-        winEl.style.zIndex = ++this.nextZIndex;
-
-        const offset = (Object.keys(this.windows).length % 5) * 24;
-        winEl.style.left = `calc(50% - ${Math.min(config.width, window.innerWidth * 0.9) / 2}px + ${offset}px)`;
-        winEl.style.top = `calc(50% - ${Math.min(config.height, window.innerHeight * 0.75) / 2}px + ${offset}px)`;
-
-        winEl.innerHTML = `
-            <div class="os-window-header">
-                <div class="os-window-dots">
-                    <button class="win-btn close-btn" title="Close" data-action="close"></button>
-                    <button class="win-btn min-btn" title="Minimize" data-action="min"></button>
-                    <button class="win-btn max-btn" title="Maximize" data-action="max"></button>
-                </div>
-                <div class="os-window-title">
-                    <i data-lucide="${config.icon}" style="width: 14px; height: 14px;"></i>
-                    <span>${config.title}</span>
-                </div>
-                <div style="width: 48px;"></div>
-            </div>
-            <div class="os-window-body" id="os-body-${appId}">
-                ${this.renderAppContent(appId)}
-            </div>
-        `;
-
-        document.getElementById('os-windows-container').appendChild(winEl);
-
-        this.windows[appId] = {
-            element: winEl,
-            isOpen: true,
-            isMaximized: false,
-            prevRect: null
-        };
-
-        this.setupWindowControls(appId);
-        this.focusWindow(appId);
-        this.postRenderApp(appId);
-
-        if (window.lucide) window.lucide.createIcons();
-    }
-
-    openMobileApp(appId) {
-        this.activeMobileApp = appId;
-        const mobileContainer = document.getElementById('mobile-app-modal-view');
-        const mobileTitle = document.getElementById('mobile-app-title');
-        const mobileBody = document.getElementById('mobile-app-body-content');
-
-        if (!mobileContainer || !mobileBody) return;
-
-        const config = this.apps[appId];
-        if (mobileTitle) mobileTitle.textContent = config.title;
-        mobileBody.innerHTML = this.renderAppContent(appId);
-
-        mobileContainer.classList.add('active');
-        this.postRenderApp(appId);
-
-        if (window.lucide) window.lucide.createIcons();
-    }
-
-    closeMobileApp() {
-        this.activeMobileApp = null;
-        const mobileContainer = document.getElementById('mobile-app-modal-view');
-        const mobileBody = document.getElementById('mobile-app-body-content');
-        if (mobileContainer) mobileContainer.classList.remove('active');
-        if (mobileBody) mobileBody.innerHTML = '';
-    }
-
-    setupWindowControls(appId) {
-        const winData = this.windows[appId];
-        const winEl = winData.element;
-        const header = winEl.querySelector('.os-window-header');
-
-        winEl.addEventListener('mousedown', () => this.focusWindow(appId));
-
-        winEl.querySelector('.close-btn').addEventListener('click', (e) => {
-            e.stopPropagation();
-            this.closeWindow(appId);
-        });
-
-        winEl.querySelector('.min-btn').addEventListener('click', (e) => {
-            e.stopPropagation();
-            winEl.style.display = 'none';
-            winData.isOpen = false;
-        });
-
-        winEl.querySelector('.max-btn').addEventListener('click', (e) => {
-            e.stopPropagation();
-            this.toggleMaximize(appId);
-        });
-
-        // Desktop dragging
-        let isDragging = false;
-        let startX, startY, initLeft, initTop;
-
-        header.addEventListener('mousedown', (e) => {
-            if (e.target.classList.contains('win-btn')) return;
-            if (winData.isMaximized) return;
-
-            isDragging = true;
-            startX = e.clientX;
-            startY = e.clientY;
-            const rect = winEl.getBoundingClientRect();
-            initLeft = rect.left;
-            initTop = rect.top;
-
-            const onMouseMove = (moveEvent) => {
-                if (!isDragging) return;
-                const dx = moveEvent.clientX - startX;
-                const dy = moveEvent.clientY - startY;
-                winEl.style.left = `${Math.max(10, Math.min(window.innerWidth - 60, initLeft + dx))}px`;
-                winEl.style.top = `${Math.max(30, Math.min(window.innerHeight - 80, initTop + dy))}px`;
-                winEl.style.transform = 'none';
-            };
-
-            const onMouseUp = () => {
-                isDragging = false;
-                window.removeEventListener('mousemove', onMouseMove);
-                window.removeEventListener('mouseup', onMouseUp);
-            };
-
-            window.addEventListener('mousemove', onMouseMove);
-            window.addEventListener('mouseup', onMouseUp);
-        });
-    }
-
-    toggleMaximize(appId) {
-        const winData = this.windows[appId];
-        const winEl = winData.element;
-
-        if (!winData.isMaximized) {
-            winData.prevRect = {
-                left: winEl.style.left,
-                top: winEl.style.top,
-                width: winEl.style.width,
-                height: winEl.style.height,
-                transform: winEl.style.transform
-            };
-            winEl.style.left = '16px';
-            winEl.style.top = '38px';
-            winEl.style.width = 'calc(100vw - 32px)';
-            winEl.style.height = 'calc(100vh - 84px)';
-            winEl.style.transform = 'none';
-            winData.isMaximized = true;
-        } else {
-            winEl.style.left = winData.prevRect.left;
-            winEl.style.top = winData.prevRect.top;
-            winEl.style.width = winData.prevRect.width;
-            winEl.style.height = winData.prevRect.height;
-            winEl.style.transform = winData.prevRect.transform;
-            winData.isMaximized = false;
-        }
-    }
-
-    focusWindow(appId) {
-        if (!this.windows[appId]) return;
-        this.focusedWindow = appId;
-        this.windows[appId].element.style.zIndex = ++this.nextZIndex;
-        document.querySelectorAll('.os-window').forEach(w => w.classList.remove('focused'));
-        this.windows[appId].element.classList.add('focused');
-    }
-
-    closeWindow(appId) {
-        if (!this.windows[appId]) return;
-        if (window.triggerHaptic) window.triggerHaptic('button');
-        const winEl = this.windows[appId].element;
-        winEl.remove();
-        delete this.windows[appId];
-    }
-
-    renderAppContent(appId) {
-        switch (appId) {
-            case 'projects':
-                return this.renderProjectsApp();
-            case 'browser':
-                return this.renderBrowserApp();
-            case 'terminal':
-                return this.renderTerminalApp();
-            case 'mycomputer':
-                return this.renderFileExplorerApp();
-            case 'resume':
-                return this.renderResumeApp();
-            case 'about':
-                return this.renderAboutApp();
-            case 'settings':
-                return this.renderSettingsApp();
-            case 'contact':
-                return this.renderContactApp();
-            default:
-                return `<div style="padding: 20px; color: #fff;">Application content initialized.</div>`;
-        }
-    }
-
-    postRenderApp(appId) {
-        if (appId === 'terminal') {
-            this.initTerminalEvents();
-        } else if (appId === 'mycomputer') {
-            this.initFileExplorerEvents();
-        } else if (appId === 'settings') {
-            this.initSettingsEvents();
-        }
-    }
-
-    // App 1: Projects Explorer (Centralized Data)
-    renderProjectsApp() {
-        const projects = window.PROJECTS_DATA || [];
-        return `
-            <div class="os-projects-grid">
-                ${projects.map(p => `
-                    <div class="os-project-card" data-project-id="${p.id}">
-                        <div class="os-proj-img" style="background-image: url('${p.coverImage}')">
-                            <span class="os-proj-num">${p.number}</span>
-                        </div>
-                        <div class="os-proj-info">
-                            <div class="os-proj-title">${p.title}</div>
-                            <div class="os-proj-cat">${p.category}</div>
-                            <p class="os-proj-desc">${p.tagline}</p>
-                            <div class="os-proj-tech">
-                                ${p.technologies.slice(0, 3).map(t => `<span>${t}</span>`).join('')}
-                            </div>
-                            <div class="os-proj-actions">
-                                ${p.liveUrl ? `<a href="${p.liveUrl}" target="_blank" rel="noopener" class="os-btn">Live ↗</a>` : ''}
-                                ${p.githubUrl ? `<a href="${p.githubUrl}" target="_blank" rel="noopener" class="os-btn">GitHub</a>` : ''}
-                            </div>
-                        </div>
-                    </div>
-                `).join('')}
-            </div>
-        `;
-    }
-
-    // App 2: Browser
-    renderBrowserApp() {
-        return `
-            <div class="os-browser-wrap">
-                <div class="os-browser-bar">
-                    <span class="browser-dot" style="background: #27c93f;"></span>
-                    <span class="browser-url">https://shivamgrover.dev/overview</span>
-                </div>
-                <div class="os-browser-body">
-                    <h2 style="font-family: var(--font-heading); color: #fff; margin-bottom: 8px;">Shivam Grover</h2>
-                    <p style="font-size: 0.85rem; color: var(--text-muted); line-height: 1.6;">
-                        Full-Stack Developer, Creative 3D Coder, and Automation Specialist based in New Delhi, India. Delivering GPU-accelerated web experiences, scalable CRM automations, and modern web architectures.
-                    </p>
-                </div>
-            </div>
-        `;
-    }
-
-    // App 3: Terminal with Quick-Touch Command Chips
-    renderTerminalApp() {
-        return `
-            <div class="os-terminal-wrap">
-                <div class="os-terminal-chips">
-                    <button class="term-chip" data-cmd="help">help</button>
-                    <button class="term-chip" data-cmd="whoami">whoami</button>
-                    <button class="term-chip" data-cmd="skills">skills</button>
-                    <button class="term-chip" data-cmd="projects">projects</button>
-                    <button class="term-chip" data-cmd="experience">experience</button>
-                    <button class="term-chip" data-cmd="contact">contact</button>
-                    <button class="term-chip" data-cmd="clear">clear</button>
-                </div>
-                <div class="os-terminal-output" id="terminal-screen-output">
-                    <div>Shivam Studio OS Kernel v2.4 (arm64-darwin/webgl2)</div>
-                    <div>Type <span class="term-cmd">'help'</span> or tap any button above to explore.</div>
-                </div>
-                <div class="os-terminal-prompt-line">
-                    <span style="color: var(--accent-green); margin-right: 6px;">shivam@workstation:~$</span>
-                    <input type="text" class="os-terminal-input" id="terminal-cmd-input" placeholder="Type command..." autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false">
-                </div>
-            </div>
-        `;
-    }
-
-    initTerminalEvents() {
-        const input = document.getElementById('terminal-cmd-input');
-        const chips = document.querySelectorAll('.term-chip');
-        if (input) {
-            input.addEventListener('keydown', (e) => {
-                if (e.key === 'Enter') {
-                    const cmd = input.value.trim().toLowerCase();
-                    input.value = '';
-                    this.executeTerminalCmd(cmd);
+        if (!this.fpsWatcherInterval) {
+            this.fpsWatcherInterval = setInterval(() => {
+                if (!this.isActive) return;
+                const statusEl = document.getElementById('os-gpu-status');
+                if (statusEl && window.studioScene) {
+                    const tier = window.studioScene.tier || 'HIGH';
+                    const fps = window.studioScene.fpsTracker ? window.studioScene.fpsTracker.currentFps : 60;
+                    statusEl.querySelector('span').textContent = `${tier} • ${fps} FPS`;
                 }
-            });
+            }, 1000);
         }
+    }
 
-        chips.forEach(chip => {
-            chip.addEventListener('click', () => {
-                const cmd = chip.getAttribute('data-cmd');
-                if (window.triggerHaptic) window.triggerHaptic('button');
-                this.executeTerminalCmd(cmd);
-            });
+    setupTerminal() {
+        const form = document.getElementById('os-term-form');
+        const input = document.getElementById('os-term-input');
+        const output = document.getElementById('os-term-output');
+
+        if (!form || !input || !output) return;
+
+        form.addEventListener('submit', (e) => {
+            e.preventDefault();
+            const cmd = input.value.trim();
+            if (!cmd) return;
+
+            this.terminalHistory.push(cmd);
+            this.historyIndex = this.terminalHistory.length;
+            input.value = '';
+
+            // Render command echo
+            const echoLine = document.createElement('div');
+            echoLine.className = 'term-line';
+            echoLine.innerHTML = `<span class="term-prompt">shivam@os:~$</span> <span class="term-echo-cmd">${this.escapeHtml(cmd)}</span>`;
+            output.appendChild(echoLine);
+
+            this.handleTerminalCommand(cmd.toLowerCase(), output);
+            output.scrollTop = output.scrollHeight;
+        });
+
+        // Arrow Key command history
+        input.addEventListener('keydown', (e) => {
+            if (e.key === 'ArrowUp') {
+                if (this.historyIndex > 0) {
+                    this.historyIndex--;
+                    input.value = this.terminalHistory[this.historyIndex] || '';
+                }
+            } else if (e.key === 'ArrowDown') {
+                if (this.historyIndex < this.terminalHistory.length - 1) {
+                    this.historyIndex++;
+                    input.value = this.terminalHistory[this.historyIndex] || '';
+                } else {
+                    this.historyIndex = this.terminalHistory.length;
+                    input.value = '';
+                }
+            }
         });
     }
 
-    executeTerminalCmd(cmd) {
-        const output = document.getElementById('terminal-screen-output');
-        if (!output) return;
-
-        const cmdLine = document.createElement('div');
-        cmdLine.innerHTML = `<span style="color: var(--accent-green);">shivam@workstation:~$</span> ${cmd}`;
-        output.appendChild(cmdLine);
-
+    handleTerminalCommand(cmd, output) {
         const respLine = document.createElement('div');
-        respLine.style.color = '#cbd5e1';
-        respLine.style.margin = '4px 0 10px';
+        respLine.className = 'term-line resp';
 
         switch (cmd) {
             case 'help':
-                respLine.innerHTML = `Available commands: <b>whoami</b>, <b>skills</b>, <b>projects</b>, <b>experience</b>, <b>contact</b>, <b>clear</b>, <b>exit</b>`;
+                respLine.innerHTML = `Available commands:<br>
+• <strong>whoami</strong> / <strong>about</strong> — Developer executive overview<br>
+• <strong>projects</strong> — Showcase of featured builds<br>
+• <strong>skills</strong> / <strong>stack</strong> — Technical languages, 3D & RevOps toolset<br>
+• <strong>neofetch</strong> — Real-time WebGL workstation telemetry<br>
+• <strong>contact</strong> — Transmission coordinates and email<br>
+• <strong>clear</strong> — Clear terminal screen<br>
+• <strong>exit</strong> — Close Studio OS`;
                 break;
+
             case 'whoami':
-                respLine.innerHTML = `Shivam Grover — Creative Web Developer & RevOps Automation Specialist based in New Delhi, India.`;
+            case 'about':
+                respLine.innerHTML = `Shivam Grover — Creative Web Developer & RevOps Automation Specialist based in New Delhi, India. Expert in Three.js, WebGL architectures, and enterprise n8n / HubSpot integrations.`;
                 break;
-            case 'skills':
-                respLine.innerHTML = `Languages: TypeScript, JavaScript, HTML5, CSS3, Python, PHP, SQL<br>3D & Frontend: Three.js, WebGL, GSAP, React, Next.js, TailwindCSS<br>Automation: n8n, HubSpot CRM, Zapier, Webhooks, REST APIs`;
-                break;
+
             case 'projects':
-                respLine.innerHTML = `1. <b>AEVONIX</b> (Interactive 3D Hardware Visualizer)<br>2. <b>CollegesPathshala</b> (Higher Ed Platform)<br>3. <b>Vacation Visits</b> (International Tourism)<br>4. <b>Saga Holidays</b> (Tour Booking Portal)<br>5. <b>AI Automation Engine</b> (n8n & HubSpot Sync)`;
+                respLine.innerHTML = `Flagship Production Artifacts:<br>
+1. <strong>AEVONIX</strong> — Real-time 3D Hardware Visualizer (Three.js/WebGL)<br>
+2. <strong>CollegesPathshala</strong> — Higher Ed Discovery Portal (Next.js/n8n)<br>
+3. <strong>Vacation Visits</strong> — Experiential Travel Platform (REST/Webhooks)<br>
+4. <strong>Saga Holidays</strong> — Luxury Tour Portal (React/Vite)`;
                 break;
-            case 'experience':
-                respLine.innerHTML = `• <b>Growthspree</b> — RevOps & Automation Intern (2026 - Present)<br>• <b>Freelance</b> — Web & Interactive Developer (2025 - 2026)`;
+
+            case 'skills':
+            case 'stack':
+                respLine.innerHTML = `Core Stack:<br>
+• Languages: TypeScript, JavaScript (ESNext), Python, HTML5, CSS3, SQL<br>
+• 3D & Frontend: Three.js, WebGL, GSAP, Lenis, React, Next.js, Tailwind<br>
+• Automation & RevOps: n8n, HubSpot CRM, Zapier, Webhooks, REST APIs`;
                 break;
+
+            case 'neofetch':
+                const tier = window.studioScene ? window.studioScene.tier : 'HIGH';
+                const fps = window.studioScene && window.studioScene.fpsTracker ? window.studioScene.fpsTracker.currentFps : 60;
+                const width = window.innerWidth;
+                const height = window.innerHeight;
+                const dpr = (window.devicePixelRatio || 1).toFixed(2);
+                respLine.innerHTML = `
+<pre style="font-family: var(--font-mono); font-size: 0.72rem; color: var(--accent-cyan); line-height: 1.35; margin: 0;">
+  /\\_/\\       shivam@workstation
+ ( o.o )      ------------------
+  &gt; ^ &lt;       OS: Studio OS v2.5 (x86_64-webgl)
+              Display: ${width}x${height} @ DPR ${dpr}
+              GPU Status: ACTIVE [Three.js r128]
+              Quality Tier: ${tier}
+              Render Target: ~${fps} FPS
+              Engine: Generative Audio & Holographic Core
+</pre>`;
+                break;
+
             case 'contact':
-                respLine.innerHTML = `Email: codewithshivamdev@gmail.com | LinkedIn: /in/shivamgrover-dev/ | GitHub: /ShivamGrover-05`;
+                respLine.innerHTML = `Email: <a href="mailto:codewithshivamdev@gmail.com" style="color: var(--accent-cyan);">codewithshivamdev@gmail.com</a><br>LinkedIn: <a href="https://linkedin.com/in/shivamgrover-dev" target="_blank" rel="noopener" style="color: var(--accent-cyan);">/in/shivamgrover-dev</a><br>GitHub: <a href="https://github.com/ShivamGrover-05" target="_blank" rel="noopener" style="color: var(--accent-cyan);">/ShivamGrover-05</a>`;
                 break;
+
             case 'clear':
                 output.innerHTML = '';
                 return;
+
             case 'exit':
                 this.exitComputer();
                 return;
+
             default:
-                respLine.innerHTML = `<span style="color: #ff7b72;">Command not found: '${cmd}'. Type 'help' for options.</span>`;
+                respLine.innerHTML = `<span style="color: #ff7b72;">Command not found: '${this.escapeHtml(cmd)}'. Type 'help' for options.</span>`;
         }
 
         output.appendChild(respLine);
-        output.scrollTop = output.scrollHeight;
     }
 
-    // App 4: File Explorer
-    renderFileExplorerApp() {
-        return `
-            <div class="os-explorer-wrap">
-                <div class="os-explorer-sidebar">
-                    <div class="explorer-side-item active"><i data-lucide="hard-drive"></i> Workspace</div>
-                    <div class="explorer-side-item" data-folder="projects"><i data-lucide="folder"></i> Projects</div>
-                    <div class="explorer-side-item" data-folder="resume"><i data-lucide="folder"></i> Resume</div>
-                    <div class="explorer-side-item" data-folder="contact"><i data-lucide="folder"></i> Contact</div>
-                </div>
-                <div class="os-explorer-main">
-                    <div class="file-item" data-open="projects"><i data-lucide="folder" class="file-icon folder"></i><span class="file-name">PROJECTS/</span></div>
-                    <div class="file-item" data-open="about"><i data-lucide="file-text" class="file-icon file"></i><span class="file-name">about.md</span></div>
-                    <div class="file-item" data-open="resume"><i data-lucide="file-text" class="file-icon file"></i><span class="file-name">resume.pdf</span></div>
-                    <div class="file-item" data-open="terminal"><i data-lucide="terminal" class="file-icon exec"></i><span class="file-name">terminal.sh</span></div>
-                    <div class="file-item" data-open="settings"><i data-lucide="sliders" class="file-icon exec"></i><span class="file-name">settings.cfg</span></div>
-                </div>
-            </div>
-        `;
-    }
-
-    initFileExplorerEvents() {
-        document.querySelectorAll('.file-item, .explorer-side-item').forEach(el => {
-            el.addEventListener('click', () => {
-                const target = el.getAttribute('data-open') || el.getAttribute('data-folder');
-                if (target && this.apps[target]) {
-                    this.openApp(target);
-                }
-            });
-        });
-    }
-
-    // App 5: Resume
-    renderResumeApp() {
-        return `
-            <div class="os-resume-wrap">
-                <h2 style="font-family: var(--font-heading); font-size: 1.4rem; color: #fff;">Shivam Grover</h2>
-                <div style="font-family: var(--font-mono); font-size: 0.75rem; color: var(--accent-cyan); margin-bottom: 14px;">Creative Developer & Automation Specialist</div>
-                <div class="resume-sec-title">EXPERIENCE</div>
-                <div class="resume-item">
-                    <div class="resume-item-header"><span class="role">RevOps & Automation Intern</span><span class="dates">2026 — Present</span></div>
-                    <div class="company">Growthspree</div>
-                    <p class="desc">Engineered HubSpot automations, streamlined inbound lead routing, and built data sync pipelines.</p>
-                </div>
-                <div class="resume-item">
-                    <div class="resume-item-header"><span class="role">Freelance Web Developer</span><span class="dates">2025 — 2026</span></div>
-                    <div class="company">Self-Employed</div>
-                    <p class="desc">Delivered custom production platforms including CollegesPathshala, Vacation Visits, and Saga Holidays.</p>
-                </div>
-                <div style="display: flex; gap: 10px; margin-top: 14px;">
-                    <a href="https://www.linkedin.com/in/shivamgrover-dev/" target="_blank" rel="noopener" class="os-btn">LinkedIn ↗</a>
-                    <a href="mailto:codewithshivamdev@gmail.com" class="os-btn">Email ✉</a>
-                </div>
-            </div>
-        `;
-    }
-
-    // App 6: About
-    renderAboutApp() {
-        return `
-            <div class="os-about-wrap">
-                <h3 style="font-family: var(--font-heading); font-size: 1.3rem; color: #fff; margin-bottom: 8px;">About Shivam</h3>
-                <p style="font-size: 0.85rem; color: var(--text-muted); line-height: 1.6;">
-                    Developer with a focus on high-impact digital experiences, 3D WebGL interactions, and enterprise workflow orchestration. Passionate about marrying aesthetic precision with engineering reliability.
-                </p>
-                <div class="about-stats-grid">
-                    <div class="about-stat-box"><div class="stat-num">3+</div><div class="stat-lbl">Live Client Apps</div></div>
-                    <div class="about-stat-box"><div class="stat-num">60fps</div><div class="stat-lbl">3D Performance</div></div>
-                    <div class="about-stat-box"><div class="stat-num">100%</div><div class="stat-lbl">Reliability</div></div>
-                </div>
-            </div>
-        `;
-    }
-
-    // App 7: Studio OS Settings (Quality Tier, Haptics, Volume)
-    renderSettingsApp() {
-        const currentTier = (window.studioScene ? window.studioScene.tier : 'AUTO');
-        const hapticsEnabled = localStorage.getItem('portfolio_haptics_enabled') !== 'false';
-        const currentVol = Math.round((window.lofiAudio ? window.lofiAudio.getVolume() : 0.3) * 100);
-
-        return `
-            <div class="os-settings-wrap" style="padding: 12px; font-family: var(--font-mono); font-size: 0.8rem; color: #cbd5e1;">
-                <div style="margin-bottom: 16px;">
-                    <div style="color: var(--accent-cyan); margin-bottom: 8px; font-weight: 700;">⚙ 3D RENDERING QUALITY</div>
-                    <div style="display: flex; gap: 8px; flex-wrap: wrap;">
-                        <button class="settings-opt-btn ${currentTier === 'HIGH' ? 'active' : ''}" data-quality="HIGH">HIGH (60 FPS)</button>
-                        <button class="settings-opt-btn ${currentTier === 'MEDIUM' ? 'active' : ''}" data-quality="MEDIUM">MEDIUM</button>
-                        <button class="settings-opt-btn ${currentTier === 'LOW' ? 'active' : ''}" data-quality="LOW">LOW (Battery Saver)</button>
-                        <button class="settings-opt-btn ${currentTier === 'FALLBACK' ? 'active' : ''}" data-quality="FALLBACK">2D FALLBACK</button>
-                    </div>
-                </div>
-
-                <div style="margin-bottom: 16px;">
-                    <div style="color: var(--accent-green); margin-bottom: 8px; font-weight: 700;">📳 HAPTIC FEEDBACK (MOBILE)</div>
-                    <button id="toggle-haptics-btn" class="settings-opt-btn active">
-                        HAPTICS: <span id="haptics-status-label">${hapticsEnabled ? 'ENABLED' : 'DISABLED'}</span>
-                    </button>
-                </div>
-
-                <div style="margin-bottom: 16px;">
-                    <div style="color: var(--accent-purple); margin-bottom: 8px; font-weight: 700;">♪ AMBIENT MUSIC VOLUME</div>
-                    <div style="display: flex; align-items: center; gap: 12px;">
-                        <input type="range" id="settings-volume-slider" min="0" max="100" value="${currentVol}" style="flex-grow: 1;">
-                        <span id="settings-volume-num">${currentVol}%</span>
-                    </div>
-                </div>
-            </div>
-        `;
-    }
-
-    initSettingsEvents() {
-        // Quality selector
-        document.querySelectorAll('.settings-opt-btn[data-quality]').forEach(btn => {
+    setupTierControls() {
+        document.querySelectorAll('.tier-btn').forEach(btn => {
             btn.addEventListener('click', () => {
-                const q = btn.getAttribute('data-quality');
-                if (window.triggerHaptic) window.triggerHaptic('button');
-                if (window.studioScene && typeof window.studioScene.setQualityTier === 'function') {
-                    window.studioScene.setQualityTier(q);
+                const tier = btn.getAttribute('data-tier');
+                if (tier && window.studioScene && typeof window.studioScene.setQualityTier === 'function') {
+                    window.studioScene.setQualityTier(tier);
+                    this.triggerHaptic('button');
+                    document.querySelectorAll('.tier-btn').forEach(b => b.classList.remove('active'));
+                    btn.classList.add('active');
+                    this.startTelemetry();
                 }
-                document.querySelectorAll('.settings-opt-btn[data-quality]').forEach(b => b.classList.remove('active'));
-                btn.classList.add('active');
             });
         });
+    }
 
-        // Haptics toggle
-        const hapticsBtn = document.getElementById('toggle-haptics-btn');
-        const hapticsLbl = document.getElementById('haptics-status-label');
-        if (hapticsBtn) {
-            hapticsBtn.addEventListener('click', () => {
-                const current = localStorage.getItem('portfolio_haptics_enabled') !== 'false';
-                const next = !current;
-                localStorage.setItem('portfolio_haptics_enabled', next ? 'true' : 'false');
-                if (hapticsLbl) hapticsLbl.textContent = next ? 'ENABLED' : 'DISABLED';
-                if (window.triggerHaptic) window.triggerHaptic('button');
-            });
-        }
-
-        // Volume slider
-        const volSlider = document.getElementById('settings-volume-slider');
-        const volNum = document.getElementById('settings-volume-num');
-        if (volSlider) {
-            volSlider.addEventListener('input', (e) => {
-                const val = parseInt(e.target.value, 10) / 100;
-                if (volNum) volNum.textContent = `${Math.round(val * 100)}%`;
-                if (window.lofiAudio && typeof window.lofiAudio.setVolume === 'function') {
-                    window.lofiAudio.setVolume(val);
-                }
+    setupEmailCopy() {
+        const copyBtn = document.getElementById('os-copy-email-btn');
+        if (copyBtn) {
+            copyBtn.addEventListener('click', () => {
+                const email = 'codewithshivamdev@gmail.com';
+                navigator.clipboard.writeText(email).then(() => {
+                    this.triggerHaptic('success');
+                    const span = copyBtn.querySelector('span');
+                    if (span) {
+                        const original = span.textContent;
+                        span.textContent = 'COPIED!';
+                        copyBtn.style.borderColor = 'var(--accent-green)';
+                        setTimeout(() => {
+                            span.textContent = original;
+                            copyBtn.style.borderColor = '';
+                        }, 2000);
+                    }
+                }).catch(() => {
+                    // Fallback
+                    window.location.href = `mailto:${email}`;
+                });
             });
         }
     }
 
-    // App 8: Contact
-    renderContactApp() {
-        return `
-            <div class="os-contact-wrap">
-                <h3 style="font-family: var(--font-heading); font-size: 1.2rem; color: #fff; margin-bottom: 8px;">Direct Communication</h3>
-                <div class="os-contact-links">
-                    <a href="mailto:codewithshivamdev@gmail.com" class="os-contact-item">
-                        <i data-lucide="mail" style="color: var(--accent-cyan);"></i>
-                        <div><div style="font-size: 0.7rem; color: var(--text-dim);">EMAIL</div><div style="color: #fff;">codewithshivamdev@gmail.com</div></div>
-                    </a>
-                    <a href="https://www.linkedin.com/in/shivamgrover-dev/" target="_blank" rel="noopener" class="os-contact-item">
-                        <i data-lucide="linkedin" style="color: #0077b5;"></i>
-                        <div><div style="font-size: 0.7rem; color: var(--text-dim);">LINKEDIN</div><div style="color: #fff;">in/shivamgrover-dev</div></div>
-                    </a>
-                </div>
-            </div>
-        `;
+    triggerHaptic(type = 'button') {
+        if (window.triggerHaptic) window.triggerHaptic(type);
+    }
+
+    escapeHtml(str) {
+        const div = document.createElement('div');
+        div.textContent = str;
+        return div.innerHTML;
     }
 }
 
+// Global instantiation
 window.virtualOS = new VirtualComputerOS();
+document.addEventListener('DOMContentLoaded', () => {
+    window.virtualOS.init();
+});

@@ -1,4 +1,296 @@
-// 3D Scene Engine with Staged Progressive Loading, Viewport-Aware Camera Framing, and Resilience
+// 3D Scene Engine — Lightweight Interactive Holographic Particle Sphere
+// Procedural Generation, Viewport-Aware Camera Framing, and Lenis Scroll Integration
+
+class CameraDirector {
+    constructor(sceneInstance) {
+        this.studio = sceneInstance;
+        this.states = {
+            HOME: {
+                desktop: { x: 0, y: 0.15, z: 6.2, targetX: 0, targetY: 0.15, targetZ: 0, fov: 45 },
+                mobile: { x: 0, y: 0.2, z: 7.0, targetX: 0, targetY: 0.2, targetZ: 0, fov: 46 }
+            },
+            ABOUT: {
+                desktop: { x: -2.2, y: 0.4, z: 6.0, targetX: 0.4, targetY: 0.2, targetZ: 0, fov: 45 },
+                mobile: { x: -0.8, y: 0.2, z: 5.8, targetX: 0, targetY: 0.1, targetZ: 0, fov: 46 }
+            },
+            SKILLS: {
+                desktop: { x: 2.0, y: 0.8, z: 5.6, targetX: -0.2, targetY: 0.2, targetZ: -0.2, fov: 45 },
+                mobile: { x: 1.0, y: 0.5, z: 5.6, targetX: 0, targetY: 0.2, targetZ: 0, fov: 46 }
+            },
+            PROJECTS: {
+                desktop: { x: 0, y: 0.3, z: 5.8, targetX: 0, targetY: 0.2, targetZ: 0, fov: 45 },
+                mobile: { x: 0, y: 0.2, z: 5.5, targetX: 0, targetY: 0.1, targetZ: 0, fov: 46 }
+            },
+            EXPERIENCE: {
+                desktop: { x: -1.6, y: 0.3, z: 6.0, targetX: 0.2, targetY: 0.15, targetZ: 0, fov: 45 },
+                mobile: { x: -0.6, y: 0.1, z: 5.6, targetX: 0, targetY: 0.1, targetZ: 0, fov: 46 }
+            },
+            CONTACT: {
+                desktop: { x: 0, y: 0.2, z: 5.6, targetX: 0, targetY: 0.2, targetZ: 0.2, fov: 45 },
+                mobile: { x: 0, y: 0.1, z: 5.5, targetX: 0, targetY: 0.1, targetZ: 0.1, fov: 46 }
+            },
+            STUDIO: {
+                desktop: { x: 0, y: 0.1, z: 1.5, targetX: 0, targetY: 0.1, targetZ: 0, fov: 42 },
+                mobile: { x: 0, y: 0, z: 1.6, targetX: 0, targetY: 0, targetZ: 0, fov: 42 }
+            },
+            PROJECT_DETAIL: {
+                desktop: { x: 0, y: 0.4, z: 5.2, targetX: 0, targetY: 0.2, targetZ: 0, fov: 45 },
+                mobile: { x: 0, y: 0.2, z: 5.0, targetX: 0, targetY: 0.1, targetZ: 0, fov: 46 }
+            }
+        };
+        this.currentStateName = 'HOME';
+    }
+
+    getState(stateName) {
+        const isMobile = window.innerWidth < 768;
+        const stateSet = this.states[stateName] || this.states.HOME;
+        return isMobile ? stateSet.mobile : stateSet.desktop;
+    }
+
+    transitionTo(stateName, customPreset = null, durationOverride = null) {
+        if (!this.studio.camera || !this.studio.controls) return;
+        this.currentStateName = stateName;
+
+        let target = customPreset;
+        if (!target) {
+            target = this.getState(stateName);
+        }
+
+        const prefersReducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+        const duration = prefersReducedMotion ? 0.1 : (durationOverride !== null ? durationOverride : 1.4);
+
+        if (stateName === 'STUDIO') {
+            this.studio.controls.enabled = false;
+        } else {
+            this.studio.controls.enabled = true;
+        }
+
+        if (window.gsap) {
+            window.gsap.killTweensOf(this.studio.camera.position);
+            window.gsap.killTweensOf(this.studio.controls.target);
+            window.gsap.killTweensOf(this.studio.camera);
+
+            window.gsap.to(this.studio.camera.position, {
+                x: target.x,
+                y: target.y,
+                z: target.z,
+                duration: duration,
+                ease: "power2.inOut"
+            });
+            window.gsap.to(this.studio.controls.target, {
+                x: target.targetX,
+                y: target.targetY,
+                z: target.targetZ,
+                duration: duration,
+                ease: "power2.inOut"
+            });
+            if (target.fov) {
+                window.gsap.to(this.studio.camera, {
+                    fov: target.fov,
+                    duration: duration,
+                    ease: "power2.inOut",
+                    onUpdate: () => {
+                        this.studio.camera.updateProjectionMatrix();
+                    }
+                });
+            }
+        } else {
+            this.studio.camera.position.set(target.x, target.y, target.z);
+            this.studio.controls.target.set(target.targetX, target.targetY, target.targetZ);
+            if (target.fov) {
+                this.studio.camera.fov = target.fov;
+                this.studio.camera.updateProjectionMatrix();
+            }
+        }
+    }
+}
+
+class InteractionManager {
+    constructor(sceneInstance) {
+        this.studio = sceneInstance;
+        this.cursor = { x: 0, y: 0, targetX: 0, targetY: 0 };
+        this.pointer = {
+            isDown: false,
+            pointerId: null,
+            startX: 0,
+            startY: 0,
+            lastX: 0,
+            lastY: 0,
+            hasMoved: false,
+            pointerType: 'mouse',
+            mode: 'IDLE'
+        };
+        this.lastRaycastTime = 0;
+        this.raycaster = new THREE.Raycaster();
+        this.mouseVector = new THREE.Vector2();
+
+        this.setupEvents();
+    }
+
+    setupEvents() {
+        const isInteractiveElement = (target) => {
+            if (!target) return false;
+            return target.closest('a, button, input, textarea, select, label, form, .navbar, .os-window, .os-taskbar, .os-desktop-shortcut, .btn-primary, .btn-ghost, .preview-thumb, .switcher-btn, .mini-music-pill, .expanded-music-card, .audio-player-widget, .audio-widget, .project-card, .interactive-terminal, .project-actions, .nav-btn, .filter-chip');
+        };
+
+        const onPointerDown = (e) => {
+            if (isInteractiveElement(e.target)) return;
+            this.pointer.isDown = true;
+            this.pointer.pointerId = e.pointerId;
+            this.pointer.startX = e.clientX;
+            this.pointer.startY = e.clientY;
+            this.pointer.lastX = e.clientX;
+            this.pointer.lastY = e.clientY;
+            this.pointer.hasMoved = false;
+            this.pointer.pointerType = e.pointerType || (this.studio.deviceProfile.isTouch ? 'touch' : 'mouse');
+            this.pointer.mode = this.pointer.pointerType === 'touch' ? 'DECIDING' : '3D_DRAG';
+
+            if (this.pointer.pointerType !== 'touch') {
+                document.body.style.cursor = 'grabbing';
+            }
+        };
+
+        const onPointerMove = (e) => {
+            this.cursor.targetX = (e.clientX / window.innerWidth - 0.5) * 2;
+            this.cursor.targetY = -(e.clientY / window.innerHeight - 0.5) * 2;
+
+            this.mouseVector.x = (e.clientX / window.innerWidth) * 2 - 1;
+            this.mouseVector.y = -(e.clientY / window.innerHeight) * 2 + 1;
+
+            if (!this.studio.deviceProfile.isTouch) {
+                const maxCursorRotY = 0.22;
+                const maxCursorRotX = 0.14;
+                this.studio.deskTransform.cursorRotation.y = this.cursor.targetX * maxCursorRotY;
+                this.studio.deskTransform.cursorRotation.x = -this.cursor.targetY * maxCursorRotX;
+                this.studio.deskTransform.cursorPosition.x = this.cursor.targetX * 0.08;
+                this.studio.deskTransform.cursorPosition.y = this.cursor.targetY * 0.05;
+            }
+
+            // Raycast hover check on sphere collider (desktop only)
+            if (!this.pointer.isDown && this.studio.hotspots.length > 0 && this.studio.camera && !this.studio.deviceProfile.isTouch) {
+                const now = performance.now();
+                if (now - this.lastRaycastTime >= 45) {
+                    this.lastRaycastTime = now;
+                    this.raycaster.setFromCamera(this.mouseVector, this.studio.camera);
+                    const intersects = this.raycaster.intersectObjects(this.studio.hotspots);
+
+                    if (intersects.length > 0) {
+                        const hit = intersects[0].object;
+                        if (this.studio.hoveredHotspot !== hit) {
+                            this.studio.hoveredHotspot = hit;
+                            document.body.style.cursor = 'pointer';
+                            this.studio.setSphereHoverState(true);
+                        }
+                    } else if (this.studio.hoveredHotspot) {
+                        this.studio.hoveredHotspot = null;
+                        this.studio.setSphereHoverState(false);
+                        document.body.style.cursor = 'default';
+                    }
+                }
+            }
+
+            if (!this.pointer.isDown) return;
+
+            const deltaX = e.clientX - this.pointer.startX;
+            const deltaY = e.clientY - this.pointer.startY;
+
+            if (this.pointer.mode === 'DECIDING') {
+                const dist = Math.hypot(deltaX, deltaY);
+                if (dist > 10) {
+                    if (Math.abs(deltaX) > Math.abs(deltaY) * 1.15) {
+                        this.pointer.mode = '3D_DRAG';
+                        this.triggerHaptic('desk');
+                        const hintPill = document.getElementById('drag-hint-pill');
+                        if (hintPill) hintPill.classList.add('fade-out');
+                        localStorage.setItem('portfolio_3d_hint_seen', 'true');
+                    } else {
+                        this.pointer.mode = 'PAGE_SCROLL';
+                    }
+                }
+            }
+
+            if (this.pointer.mode === '3D_DRAG') {
+                const dx = e.clientX - this.pointer.lastX;
+                const dy = e.clientY - this.pointer.lastY;
+
+                if (Math.hypot(dx, dy) > 2) {
+                    this.pointer.hasMoved = true;
+                }
+
+                this.studio.dragVelocity.x = dx;
+                this.studio.dragVelocity.y = dy;
+
+                const interactionScale = this.studio.tier === 'LOW' ? 0.6 : 1.0;
+                const sensX = (this.pointer.pointerType === 'touch' ? 0.0075 : 0.0055) * interactionScale;
+                const sensY = (this.pointer.pointerType === 'touch' ? 0.0045 : 0.0035) * interactionScale;
+
+                this.studio.deskTransform.dragRotation.y = Math.max(
+                    -1.2,
+                    Math.min(1.2, this.studio.deskTransform.dragRotation.y + dx * sensX)
+                );
+                this.studio.deskTransform.dragRotation.x = Math.max(
+                    -0.45,
+                    Math.min(0.45, this.studio.deskTransform.dragRotation.x + dy * sensY)
+                );
+
+                const resetBtn = document.getElementById('reset-desk-view-btn');
+                if (resetBtn && (Math.abs(this.studio.deskTransform.dragRotation.y) > 0.04 || Math.abs(this.studio.deskTransform.dragRotation.x) > 0.04)) {
+                    resetBtn.classList.add('visible');
+                    resetBtn.style.opacity = '1';
+                }
+            }
+
+            this.pointer.lastX = e.clientX;
+            this.pointer.lastY = e.clientY;
+        };
+
+        const onPointerUp = (e) => {
+            if (!this.pointer.isDown) return;
+            if (!this.pointer.hasMoved && !isInteractiveElement(e.target)) {
+                this.handleRaycastClick(e);
+            }
+            this.pointer.isDown = false;
+            this.pointer.mode = 'IDLE';
+
+            if (this.pointer.pointerType !== 'touch') {
+                document.body.style.cursor = 'default';
+            }
+        };
+
+        const onMouseLeave = () => {
+            this.cursor.targetX = 0;
+            this.cursor.targetY = 0;
+            this.studio.deskTransform.cursorRotation.y = 0;
+            this.studio.deskTransform.cursorRotation.x = 0;
+            this.studio.deskTransform.cursorPosition.x = 0;
+            this.studio.deskTransform.cursorPosition.y = 0;
+        };
+
+        window.addEventListener('pointerdown', onPointerDown, { passive: true });
+        window.addEventListener('pointermove', onPointerMove, { passive: true });
+        window.addEventListener('pointerup', onPointerUp, { passive: true });
+        window.addEventListener('pointercancel', onPointerUp, { passive: true });
+        document.addEventListener('mouseleave', onMouseLeave, { passive: true });
+    }
+
+    handleRaycastClick(e) {
+        // Raycast click deliberately does NOT trigger Studio OS
+        // Studio OS is strictly launched via dedicated intentional button triggers only
+    }
+
+    triggerHaptic(type = 'button') {
+        if (window.triggerHaptic) {
+            window.triggerHaptic(type);
+        }
+    }
+
+    update(elapsedTime) {
+        if (!this.studio.deviceProfile.isTouch) {
+            this.cursor.x += (this.cursor.targetX - this.cursor.x) * 0.05;
+            this.cursor.y += (this.cursor.targetY - this.cursor.y) * 0.05;
+        }
+    }
+}
 
 class StudioScene {
     constructor() {
@@ -7,30 +299,35 @@ class StudioScene {
         this.camera = null;
         this.renderer = null;
         this.controls = null;
-        this.model = null;
-        this.particles = null;
-        this.lampLight = null;
-        this.neonLight = null;
-        this.screenCanvas = null;
-        this.screenContext = null;
-        this.screenTexture = null;
-        this.screenMesh = null;
+        this.model = null; // Points to the Holographic Sphere Group for uniform transforms
+        this.sphereGroup = null;
+        this.spherePoints = null;
+        this.orbitalRings = [];
+        this.satellites = [];
+        this.particles = null; // Ambient floating dust particles
+        this.ambientLight = null;
+        this.keyLight = null;
+        this.rimLight = null;
+        this.glowTexture = null;
         this.clock = new THREE.Clock();
-        this.mouse = { x: 0, y: 0, targetX: 0, targetY: 0 };
         this.currentSection = 'home';
-        this.deskLampOn = true;
+        this.coreIlluminationMode = true;
         this.isContextLost = false;
         this.animFrameId = null;
         this.isInitialized = false;
         this.isVisible = true;
         this.isTabVisible = typeof document !== 'undefined' ? !document.hidden : true;
         this.sceneObserver = null;
-        this.stage = 0; // 0: uninitialized, 1: shell & camera, 2: lighting & floor, 3: GLB model & screen, 4: hotspots & particles
+        this.isSphereHovered = false;
+
+        this.interactionManager = null;
+        this.cameraDirector = null;
+        this.dragVelocity = { x: 0, y: 0 };
 
         // Capability-Based Device Profiling
         this.deviceProfile = this.detectDeviceProfile();
         this.tier = this.determinePerformanceTier(this.deviceProfile);
-        
+
         // Runtime FPS & Frame Time Watcher
         this.fpsTracker = {
             frames: 0,
@@ -41,33 +338,33 @@ class StudioScene {
             downgradeCooldown: 0
         };
 
-        // Unified Multi-Input 3D Desk Transform Architecture
-        // targetRotation = BASE + SCROLL + CURSOR + DRAG
-        // targetPosition = BASE + SCROLL + CURSOR
+        // Unified Multi-Input Transform Architecture
+        // Target: base + scroll + cursor + drag
+        const isMobile = this.deviceProfile.isMobile;
         this.deskTransform = {
-            baseRotation: { x: 0, y: 0, z: 0 },
-            basePosition: { x: 0, y: 0, z: 0 },
-            
+            baseRotation: { x: 0.15, y: 0, z: 0 },
+            basePosition: { x: isMobile ? 0 : 1.15, y: isMobile ? -0.2 : 0.05, z: 0 },
+
             scrollRotation: { x: 0, y: 0, z: 0 },
             scrollPosition: { x: 0, y: 0, z: 0 },
-            
+
             cursorRotation: { x: 0, y: 0 },
             cursorPosition: { x: 0, y: 0 },
-            
+
             dragRotation: { x: 0, y: 0 },
-            
-            currentRotation: { x: 0, y: 0, z: 0 },
-            currentPosition: { x: 0, y: 0, z: 0 },
-            
+
+            currentRotation: { x: 0.15, y: 0, z: 0 },
+            currentPosition: { x: isMobile ? 0 : 1.15, y: isMobile ? -0.2 : 0.05, z: 0 },
+
             limits: {
-                minRotY: -0.85, // ~ -48 deg
-                maxRotY: 0.85,  // ~ +48 deg
-                minRotX: -0.38, // ~ -22 deg
-                maxRotX: 0.38,  // ~ +22 deg
-                minPosY: -0.35,
-                maxPosY: 0.35,
-                minPosX: -0.25,
-                maxPosX: 0.25
+                minRotY: -1.4,
+                maxRotY: 1.4,
+                minRotX: -0.5,
+                maxRotX: 0.5,
+                minPosY: -0.6,
+                maxPosY: 0.6,
+                minPosX: -0.5,
+                maxPosX: 2.2
             }
         };
 
@@ -77,51 +374,35 @@ class StudioScene {
             velocity: 0
         };
 
-        this.pointerState = {
-            isDown: false,
-            pointerId: null,
-            startX: 0,
-            startY: 0,
-            lastX: 0,
-            lastY: 0,
-            mode: 'IDLE', // 'IDLE', 'DECIDING', '3D_DRAG', 'PAGE_SCROLL'
-            pointerType: 'mouse',
-            hasMoved: false
-        };
-
-        // Raycasting & Hotspots
-        this.raycaster = new THREE.Raycaster();
-        this.mouseVector = new THREE.Vector2();
+        // Raycasting & Hotspot Targets
         this.hotspots = [];
         this.hoveredHotspot = null;
 
-        // Dedicated Viewport-Aware Camera Configurations (Desktop vs Tablet vs Mobile)
+        // Dedicated Viewport-Aware Camera Configurations
         this.cameraPositions = {
             desktop: {
-                home: { x: 0, y: 3.0, z: 6.8, targetX: 0, targetY: 1.2, targetZ: 0 },
-                about: { x: -3.5, y: 2.8, z: 5.5, targetX: -0.5, targetY: 1.4, targetZ: 0 },
-                projects: { x: 0, y: 2.8, z: 5.2, targetX: 0, targetY: 1.4, targetZ: 0 },
-                skills: { x: 2.5, y: 4.2, z: 4.8, targetX: 0, targetY: 1.6, targetZ: -0.5 },
-                experience: { x: -2.8, y: 2.2, z: 6.0, targetX: -0.2, targetY: 1.1, targetZ: 0 },
-                contact: { x: 0, y: 2.6, z: 5.2, targetX: 0, targetY: 1.2, targetZ: 0.5 }
+                home: { x: 0, y: 0.15, z: 6.2, targetX: 0, targetY: 0.15, targetZ: 0 },
+                about: { x: -2.2, y: 0.4, z: 6.0, targetX: 0.4, targetY: 0.2, targetZ: 0 },
+                projects: { x: 0, y: 0.3, z: 5.8, targetX: 0, targetY: 0.2, targetZ: 0 },
+                skills: { x: 2.0, y: 0.8, z: 5.6, targetX: -0.2, targetY: 0.2, targetZ: -0.2 },
+                experience: { x: -1.6, y: 0.3, z: 6.0, targetX: 0.2, targetY: 0.15, targetZ: 0 },
+                contact: { x: 0, y: 0.2, z: 5.6, targetX: 0, targetY: 0.2, targetZ: 0.2 }
             },
             mobile: {
-                // Centered prominently in mobile hero viewport (no huge empty space!)
-                home: { x: 0, y: 2.4, z: 4.6, targetX: 0, targetY: 1.25, targetZ: 0 },
-                about: { x: -1.8, y: 2.2, z: 4.8, targetX: -0.3, targetY: 1.3, targetZ: 0 },
-                projects: { x: 0, y: 2.2, z: 4.5, targetX: 0, targetY: 1.3, targetZ: 0 },
-                skills: { x: 1.6, y: 2.8, z: 4.6, targetX: 0, targetY: 1.4, targetZ: -0.3 },
-                experience: { x: -1.6, y: 2.0, z: 4.9, targetX: -0.2, targetY: 1.1, targetZ: 0 },
-                contact: { x: 0, y: 2.2, z: 4.5, targetX: 0, targetY: 1.2, targetZ: 0.3 }
+                home: { x: 0, y: 0.2, z: 7.0, targetX: 0, targetY: 0.2, targetZ: 0 },
+                about: { x: -0.8, y: 0.2, z: 5.8, targetX: 0, targetY: 0.1, targetZ: 0 },
+                projects: { x: 0, y: 0.2, z: 5.5, targetX: 0, targetY: 0.1, targetZ: 0 },
+                skills: { x: 1.0, y: 0.5, z: 5.6, targetX: 0, targetY: 0.2, targetZ: 0 },
+                experience: { x: -0.6, y: 0.1, z: 5.6, targetX: 0, targetY: 0.1, targetZ: 0 },
+                contact: { x: 0, y: 0.1, z: 5.5, targetX: 0, targetY: 0.1, targetZ: 0.1 }
             }
         };
 
-        // Defer 3D setup slightly so the primary UI & Typography paint instantly without blocking CPU/GPU
         if (typeof window !== 'undefined') {
             if ('requestIdleCallback' in window) {
-                window.requestIdleCallback(() => this.startProgressiveInit(), { timeout: 350 });
+                window.requestIdleCallback(() => this.startProgressiveInit(), { timeout: 250 });
             } else {
-                setTimeout(() => this.startProgressiveInit(), 50);
+                setTimeout(() => this.startProgressiveInit(), 40);
             }
         }
     }
@@ -131,7 +412,7 @@ class StudioScene {
         const userAgent = navigator.userAgent || '';
         const isMobileUA = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(userAgent);
         const concurrency = navigator.hardwareConcurrency || 4;
-        const memory = navigator.deviceMemory || 4; // GB (Chrome/Edge)
+        const memory = navigator.deviceMemory || 4;
         const dpr = window.devicePixelRatio || 1;
         const width = window.innerWidth;
         const height = window.innerHeight;
@@ -181,7 +462,7 @@ class StudioScene {
 
         if (!p.hasWebGL) return 'FALLBACK';
 
-        // Low-End Mobile (Snapdragon 680, low memory, budget mobile GPUs like Adreno 610/Mali-G52)
+        // Low-End Mobile (Snapdragon 680, low memory, budget mobile GPUs)
         const isLowGPU = /Adreno\s*(5|610|612|616)|Mali-G(51|52|57|71)|PowerVR/i.test(p.rendererString);
         if (p.isMobile && (p.memory <= 4 || p.concurrency <= 4 || isLowGPU || p.maxTextureSize <= 4096)) {
             return 'LOW';
@@ -190,6 +471,28 @@ class StudioScene {
         if (p.isMobile) return 'MEDIUM';
         if (p.concurrency <= 4 || p.memory <= 4) return 'MEDIUM';
         return 'HIGH';
+    }
+
+    // Procedural Glowing Circular Particle Sprite (Zero External Assets)
+    createGlowPointTexture() {
+        if (this.glowTexture) return this.glowTexture;
+        const canvas = document.createElement('canvas');
+        canvas.width = 64;
+        canvas.height = 64;
+        const ctx = canvas.getContext('2d');
+
+        const gradient = ctx.createRadialGradient(32, 32, 0, 32, 32, 32);
+        gradient.addColorStop(0, 'rgba(255, 255, 255, 1.0)');
+        gradient.addColorStop(0.18, 'rgba(0, 243, 255, 0.95)');
+        gradient.addColorStop(0.45, 'rgba(0, 180, 255, 0.45)');
+        gradient.addColorStop(0.75, 'rgba(138, 43, 226, 0.18)');
+        gradient.addColorStop(1, 'rgba(0, 0, 0, 0)');
+
+        ctx.fillStyle = gradient;
+        ctx.fillRect(0, 0, 64, 64);
+
+        this.glowTexture = new THREE.CanvasTexture(canvas);
+        return this.glowTexture;
     }
 
     startProgressiveInit() {
@@ -204,7 +507,7 @@ class StudioScene {
         try {
             // Stage 1: Renderer & Camera Initialization
             this.scene = new THREE.Scene();
-            this.camera = new THREE.PerspectiveCamera(45, window.innerWidth / window.innerHeight, 0.1, 80);
+            this.camera = new THREE.PerspectiveCamera(45, window.innerWidth / window.innerHeight, 0.1, 60);
 
             let targetDPR = 1.0;
             if (this.tier === 'HIGH') {
@@ -227,19 +530,8 @@ class StudioScene {
 
             this.renderer.setSize(window.innerWidth, window.innerHeight);
             this.renderer.setPixelRatio(targetDPR);
-            
-            if (this.tier === 'HIGH') {
-                this.renderer.shadowMap.enabled = true;
-                this.renderer.shadowMap.type = THREE.PCFSoftShadowMap;
-            } else if (this.tier === 'MEDIUM') {
-                this.renderer.shadowMap.enabled = true;
-                this.renderer.shadowMap.type = THREE.PCFShadowMap;
-            } else {
-                this.renderer.shadowMap.enabled = false;
-            }
-
             this.renderer.toneMapping = THREE.ACESFilmicToneMapping;
-            this.renderer.toneMappingExposure = 1.1;
+            this.renderer.toneMappingExposure = 1.15;
             this.container.innerHTML = '';
             this.container.appendChild(this.renderer.domElement);
 
@@ -247,26 +539,29 @@ class StudioScene {
             this.updateCameraForViewport();
             this.setupControls();
 
-            // Stage 2: Essential Room Environment & Basic Lighting
+            // Instantiate Centralized Systems
+            this.cameraDirector = new CameraDirector(this);
+            this.interactionManager = new InteractionManager(this);
+
+            // Stage 2: Lighting & Environment
             this.setupLighting();
-            this.setupRoomEnvironment();
 
-            // Stage 3: Neon sign & Screen Canvas
-            this.setupNeonSign();
-            this.setupScreenCanvas();
+            // Stage 3: Lightweight Procedural Holographic Particle Sphere (NO GLB)
+            this.setupHolographicSphere();
 
-            // Stage 4: Load 3D GLB Model (Asynchronously)
-            this.loadModel();
-
-            // Stage 5: Secondary Elements (Hotspots & Particles)
-            this.setupInteractiveHotspots();
+            // Stage 4: Ambient Floating Dust Particles
             if (this.tier !== 'LOW') {
                 this.setupDustParticles();
             }
 
-            // Stage 6: Interactive Pointer, Cursor Parallax & Mobile Gesture Subsystem
+            // Stage 5: Pointer & Visibility Observers
             this.setupPointerInteractions();
             this.setupVisibilityObserver();
+
+            // Update progress bar & dismiss loading screen quickly
+            const progressBar = document.getElementById('loading-bar-fill');
+            if (progressBar) progressBar.style.width = '100%';
+            this.dismissLoadingScreen();
 
             // Event Listeners
             window.addEventListener('resize', this.onWindowResize.bind(this), { passive: true });
@@ -293,7 +588,7 @@ class StudioScene {
         }, false);
 
         canvas.addEventListener('webglcontextrestored', () => {
-            console.log('WebGL context restored! Rebuilding 3D workspace...');
+            console.log('WebGL context restored! Rebuilding 3D core...');
             this.isContextLost = false;
             this.startProgressiveInit();
         }, false);
@@ -305,14 +600,13 @@ class StudioScene {
             this.controls.enableDamping = true;
             this.controls.dampingFactor = 0.06;
             this.controls.enableZoom = !this.deviceProfile.isMobile;
-            this.controls.maxPolarAngle = Math.PI / 2 + 0.05;
-            this.controls.minPolarAngle = Math.PI / 6;
-            this.controls.minAzimuthAngle = -Math.PI / 3;
-            this.controls.maxAzimuthAngle = Math.PI / 3;
-            
-            // On desktop: full rotation with mouse. On mobile: enabled via explicit desk interaction or horizontal drags only
+            this.controls.maxPolarAngle = Math.PI / 2 + 0.15;
+            this.controls.minPolarAngle = Math.PI / 5;
+            this.controls.minAzimuthAngle = -Math.PI / 2.5;
+            this.controls.maxAzimuthAngle = Math.PI / 2.5;
+
             if (this.deviceProfile.isMobile) {
-                this.controls.enableRotate = false; // Prevents OrbitControls from capturing native vertical touch scroll
+                this.controls.enableRotate = false; // Never hijack vertical page scroll on mobile
             }
 
             const preset = this.getCameraPreset(this.currentSection);
@@ -337,20 +631,20 @@ class StudioScene {
         const aspect = window.innerWidth / window.innerHeight;
         const isMobile = window.innerWidth < 768;
         const p = this.getCameraPreset(this.currentSection);
-        
-        // Proper Viewport-Aware Dynamic Framing (Mobile Portrait vs Landscape vs Desktop)
+
+        // Update responsive base position of sphere
+        this.deskTransform.basePosition.x = isMobile ? 0 : 1.15;
+        this.deskTransform.basePosition.y = isMobile ? -0.2 : 0.05;
+
         if (isMobile) {
             if (aspect < 0.52) {
-                // Ultra-tall screens (20:9, 21:9)
-                this.camera.position.set(p.x, p.y + 0.15, p.z + 0.6);
-                this.camera.fov = 50;
+                this.camera.position.set(p.x, p.y + 0.15, p.z + 0.5);
+                this.camera.fov = 48;
             } else if (aspect < 0.65) {
-                // Standard mobile portrait (19.5:9, 18:9)
                 this.camera.position.set(p.x, p.y, p.z);
                 this.camera.fov = 46;
             } else {
-                // Mobile landscape or square tablet
-                this.camera.position.set(p.x, p.y - 0.1, p.z - 0.4);
+                this.camera.position.set(p.x, p.y - 0.1, p.z - 0.3);
                 this.camera.fov = 44;
             }
         } else {
@@ -367,314 +661,547 @@ class StudioScene {
     }
 
     setupLighting() {
-        const ambientLight = new THREE.AmbientLight(0x1a1a2e, this.tier === 'LOW' ? 1.6 : 1.2);
-        this.scene.add(ambientLight);
+        // Deep futuristic illumination
+        this.ambientLight = new THREE.AmbientLight(0x060c1d, 1.8);
+        this.scene.add(this.ambientLight);
 
-        const keyLight = new THREE.DirectionalLight(0x7082a4, this.tier === 'LOW' ? 1.4 : 1.8);
-        keyLight.position.set(-6, 10, 8);
-        
-        if (this.tier !== 'LOW') {
-            keyLight.castShadow = true;
-            keyLight.shadow.mapSize.width = this.tier === 'HIGH' ? 1024 : 512;
-            keyLight.shadow.mapSize.height = this.tier === 'HIGH' ? 1024 : 512;
-            keyLight.shadow.bias = -0.0001;
-        }
-        this.scene.add(keyLight);
+        // Electric cyan key directional light
+        this.keyLight = new THREE.DirectionalLight(0x00f3ff, 1.4);
+        this.keyLight.position.set(-4, 6, 6);
+        this.scene.add(this.keyLight);
 
-        this.lampLight = new THREE.SpotLight(0xffecd2, 4.5, 9, Math.PI / 3.5, 0.45, 1.2);
-        this.lampLight.position.set(-1.1, 3.1, 0.2);
-        this.lampLight.target.position.set(-0.2, 1.2, 0.4);
-        if (this.tier === 'HIGH') {
-            this.lampLight.castShadow = true;
-        }
-        this.scene.add(this.lampLight);
-        this.scene.add(this.lampLight.target);
-
-        this.neonLight = new THREE.PointLight(0x00f3ff, 3.2, 10, 1.4);
-        this.neonLight.position.set(0.2, 4.2, -1.2);
-        this.scene.add(this.neonLight);
-
-        const rimLight = new THREE.PointLight(0x8a2be2, 3.2, 12, 1.5);
-        rimLight.position.set(4, 2.5, 2);
-        this.scene.add(rimLight);
-
-        if (this.tier !== 'LOW') {
-            const groundLight = new THREE.PointLight(0x1e153b, 1.5, 6);
-            groundLight.position.set(0, 0.2, 2);
-            this.scene.add(groundLight);
-        }
+        // Violet / Purple accent rim light
+        this.rimLight = new THREE.PointLight(0x8a2be2, 3.5, 12, 1.2);
+        this.rimLight.position.set(4, 3, 3);
+        this.scene.add(this.rimLight);
     }
 
-    setupRoomEnvironment() {
-        const floorGeo = new THREE.PlaneGeometry(24, 24);
-        const floorMat = new THREE.MeshStandardMaterial({
-            color: 0x0c0d16,
-            roughness: 0.75,
-            metalness: 0.15,
-        });
-        const floor = new THREE.Mesh(floorGeo, floorMat);
-        floor.rotation.x = -Math.PI / 2;
-        floor.position.y = 0;
-        if (this.tier !== 'LOW') floor.receiveShadow = true;
-        this.scene.add(floor);
+    // =========================================================================
+    // Procedural Holographic Particle Sphere & Orbital Rings Subsystem
+    // =========================================================================
+    setupHolographicSphere() {
+        this.sphereGroup = new THREE.Group();
+        this.model = this.sphereGroup; // Retain uniform transform mapping
 
-        const wallGeo = new THREE.PlaneGeometry(24, 14);
-        const wallMat = new THREE.MeshStandardMaterial({
-            color: 0x121422,
-            roughness: 0.9,
-            metalness: 0.05
-        });
-        const backWall = new THREE.Mesh(wallGeo, wallMat);
-        backWall.position.set(0, 7, -2.8);
-        if (this.tier !== 'LOW') backWall.receiveShadow = true;
-        this.scene.add(backWall);
+        // Initial responsive position
+        const isMobile = this.deviceProfile.isMobile;
+        this.sphereGroup.position.set(
+            this.deskTransform.basePosition.x,
+            this.deskTransform.basePosition.y,
+            this.deskTransform.basePosition.z
+        );
 
-        const rugGeo = new THREE.CircleGeometry(2.6, 24);
-        const rugMat = new THREE.MeshStandardMaterial({
-            color: 0x191a2d,
-            roughness: 0.98,
-            metalness: 0.02
-        });
-        const rug = new THREE.Mesh(rugGeo, rugMat);
-        rug.rotation.x = -Math.PI / 2;
-        rug.position.set(0, 0.01, 0.8);
-        if (this.tier !== 'LOW') rug.receiveShadow = true;
-        this.scene.add(rug);
-    }
+        const pointTexture = this.createGlowPointTexture();
 
-    setupNeonSign() {
-        const canvas = document.createElement('canvas');
-        canvas.width = 512;
-        canvas.height = 200;
-        const ctx = canvas.getContext('2d');
+        // 1. Determine particle count based on performance tier
+        let totalCount = 11000;
+        if (this.tier === 'MEDIUM') totalCount = 5500;
+        if (this.tier === 'LOW') totalCount = 2200;
 
-        ctx.fillStyle = 'rgba(0,0,0,0)';
-        ctx.fillRect(0, 0, canvas.width, canvas.height);
+        const sphereRadius = 2.0;
 
-        ctx.font = 'bold 52px "Outfit", "Inter", sans-serif';
-        ctx.textAlign = 'center';
-        ctx.textBaseline = 'middle';
+        // Reserve portion of particles for coordinate lines (parallels & meridians), rest for surface/network clusters
+        const gridCount = Math.floor(totalCount * 0.35);
+        const surfaceCount = totalCount - gridCount;
 
-        ctx.shadowColor = '#00f3ff';
-        ctx.shadowBlur = this.tier === 'LOW' ? 10 : 30;
-        ctx.fillStyle = '#ffffff';
-        ctx.fillText('KEEP', canvas.width / 2, 60);
-        ctx.fillText('BUILDING', canvas.width / 2, 130);
+        const positions = new Float32Array(totalCount * 3);
+        const colors = new Float32Array(totalCount * 3);
+        const sizes = new Float32Array(totalCount);
 
-        const neonTexture = new THREE.CanvasTexture(canvas);
-        const signGeo = new THREE.PlaneGeometry(3.2, 1.2);
-        const signMat = new THREE.MeshBasicMaterial({
-            map: neonTexture,
-            transparent: true,
-            opacity: 0.95
-        });
-        const signMesh = new THREE.Mesh(signGeo, signMat);
-        signMesh.position.set(0.1, 4.4, -2.75);
-        this.scene.add(signMesh);
-    }
+        let ptr = 0;
 
-    setupScreenCanvas() {
-        this.screenCanvas = document.createElement('canvas');
-        this.screenCanvas.width = 384;
-        this.screenCanvas.height = 240;
-        this.screenContext = this.screenCanvas.getContext('2d');
+        // A. Latitude Parallels & Longitude Meridians (Digital Globe Coordinate Matrix)
+        const latitudes = [-70, -55, -40, -25, -10, 0, 10, 25, 40, 55, 70];
+        const pointsPerLat = Math.floor((gridCount * 0.55) / latitudes.length);
 
-        this.screenTexture = new THREE.CanvasTexture(this.screenCanvas);
-        this.screenTexture.minFilter = THREE.LinearFilter;
+        latitudes.forEach(latDeg => {
+            const phi = (90 - latDeg) * (Math.PI / 180);
+            const rSinPhi = sphereRadius * Math.sin(phi);
+            const rCosPhi = sphereRadius * Math.cos(phi);
 
-        this.renderScreenContent(0);
-    }
+            for (let i = 0; i < pointsPerLat && ptr < totalCount; i++) {
+                const theta = (i / pointsPerLat) * Math.PI * 2;
+                const idx = ptr * 3;
 
-    renderScreenContent(time) {
-        if (!this.screenContext) return;
-        
-        const throttleInterval = this.tier === 'LOW' ? 0.25 : 0.08;
-        if (this.lastScreenUpdate && (time - this.lastScreenUpdate < throttleInterval)) return;
-        this.lastScreenUpdate = time;
+                positions[idx] = rSinPhi * Math.cos(theta);
+                positions[idx + 1] = rCosPhi;
+                positions[idx + 2] = rSinPhi * Math.sin(theta);
 
-        const ctx = this.screenContext;
-        const w = this.screenCanvas.width;
-        const h = this.screenCanvas.height;
+                // Coordinate lines: subtle cyan / bright blue
+                colors[idx] = 0.0;
+                colors[idx + 1] = 0.85;
+                colors[idx + 2] = 1.0;
 
-        ctx.fillStyle = '#0d1117';
-        ctx.fillRect(0, 0, w, h);
-
-        ctx.fillStyle = '#161b22';
-        ctx.fillRect(0, 0, w, 22);
-
-        ctx.fillStyle = '#ff5f56';
-        ctx.beginPath(); ctx.arc(12, 11, 4, 0, Math.PI * 2); ctx.fill();
-        ctx.fillStyle = '#ffbd2e';
-        ctx.beginPath(); ctx.arc(24, 11, 4, 0, Math.PI * 2); ctx.fill();
-        ctx.fillStyle = '#27c93f';
-        ctx.beginPath(); ctx.arc(36, 11, 4, 0, Math.PI * 2); ctx.fill();
-
-        ctx.font = '10px "JetBrains Mono", monospace';
-        ctx.fillStyle = '#8b949e';
-        ctx.fillText('ProjectShowcase.tsx — ShivamGrover.dev', 54, 15);
-
-        const lines = [
-            { text: 'import { SelectedWork, StudioOS } from "@shivam/core";', color: '#ff7b72' },
-            { text: 'export const ActiveProject = () => {', color: '#d2a8ff' },
-            { text: '  const builds = [ "Aevonix", "CollegesPathshala", "VacationVisits" ];', color: '#7ee787' },
-            { text: '  return <Exhibition projects={builds} status="live" />;', color: '#79c0ff' },
-            { text: '};', color: '#d2a8ff' }
-        ];
-
-        const lineCount = Math.floor((time * 1.5) % (lines.length + 3));
-
-        lines.forEach((line, i) => {
-            if (i <= lineCount) {
-                ctx.fillStyle = '#484f58';
-                ctx.fillText(`${i + 1}`, 12, 44 + i * 18);
-                ctx.fillStyle = line.color;
-                ctx.fillText(line.text, 32, 44 + i * 18);
+                sizes[ptr] = 0.045;
+                ptr++;
             }
         });
 
-        if (Math.sin(time * 5) > 0) {
-            ctx.fillStyle = '#00f3ff';
-            const cursorY = 44 + Math.min(lineCount, lines.length - 1) * 18;
-            ctx.fillRect(32 + lines[Math.min(lineCount, lines.length - 1)].text.length * 6.2, cursorY - 9, 6, 11);
+        // Longitude Meridians
+        const longitudes = [0, 30, 60, 90, 120, 150, 180, 210, 240, 270, 300, 330];
+        const pointsPerLong = Math.floor((gridCount * 0.45) / longitudes.length);
+
+        longitudes.forEach(lonDeg => {
+            const theta = lonDeg * (Math.PI / 180);
+            for (let i = 0; i < pointsPerLong && ptr < totalCount; i++) {
+                const phi = (i / pointsPerLong) * Math.PI;
+                const idx = ptr * 3;
+
+                positions[idx] = sphereRadius * Math.sin(phi) * Math.cos(theta);
+                positions[idx + 1] = sphereRadius * Math.cos(phi);
+                positions[idx + 2] = sphereRadius * Math.sin(phi) * Math.sin(theta);
+
+                colors[idx] = 0.15;
+                colors[idx + 1] = 0.75;
+                colors[idx + 2] = 1.0;
+
+                sizes[ptr] = 0.042;
+                ptr++;
+            }
+        });
+
+        // B. Surface & Continental / Network Density Fibonacci Distribution
+        const goldenRatio = (1 + Math.sqrt(5)) / 2;
+        const remaining = totalCount - ptr;
+
+        for (let i = 0; i < remaining && ptr < totalCount; i++) {
+            const idx = ptr * 3;
+            const theta = 2 * Math.PI * i / goldenRatio;
+            const phi = Math.acos(1 - 2 * (i + 0.5) / remaining);
+
+            // Procedural network clustering function
+            const nx = Math.sin(phi) * Math.cos(theta);
+            const ny = Math.cos(phi);
+            const nz = Math.sin(phi) * Math.sin(theta);
+
+            // Perlin-like pseudo frequency to simulate data continents & network clusters
+            const cluster = Math.sin(nx * 3.5 + ny * 2.0) * Math.cos(nz * 3.0 + nx * 1.5);
+            const isClusterNode = cluster > 0.2;
+            const isHotspot = cluster > 0.55;
+
+            // Slight radius variation for depth & holographic shimmer
+            const rOffset = (Math.random() - 0.5) * 0.06 + (isHotspot ? 0.03 : 0);
+            const r = sphereRadius + rOffset;
+
+            positions[idx] = r * nx;
+            positions[idx + 1] = r * ny;
+            positions[idx + 2] = r * nz;
+
+            if (isHotspot) {
+                // Bright electric cyan / white nodes
+                colors[idx] = 0.85;
+                colors[idx + 1] = 1.0;
+                colors[idx + 2] = 1.0;
+                sizes[ptr] = 0.075;
+            } else if (isClusterNode) {
+                // Vibrant electric cyan
+                colors[idx] = 0.0;
+                colors[idx + 1] = 0.95;
+                colors[idx + 2] = 1.0;
+                sizes[ptr] = 0.06;
+            } else if (Math.random() < 0.28) {
+                // Violet / purple accents matching portfolio identity
+                colors[idx] = 0.65;
+                colors[idx + 1] = 0.35;
+                colors[idx + 2] = 1.0;
+                sizes[ptr] = 0.052;
+            } else {
+                // Deep cyan background ocean points
+                colors[idx] = 0.05;
+                colors[idx + 1] = 0.55;
+                colors[idx + 2] = 0.95;
+                sizes[ptr] = 0.045;
+            }
+
+            ptr++;
         }
 
-        if (this.screenTexture) {
-            this.screenTexture.needsUpdate = true;
+        const sphereGeometry = new THREE.BufferGeometry();
+        sphereGeometry.setAttribute('position', new THREE.BufferAttribute(positions, 3));
+        sphereGeometry.setAttribute('color', new THREE.BufferAttribute(colors, 3));
+        sphereGeometry.setAttribute('size', new THREE.BufferAttribute(sizes, 1));
+
+        const sphereMaterial = new THREE.PointsMaterial({
+            size: this.tier === 'LOW' ? 0.065 : 0.08,
+            map: pointTexture,
+            vertexColors: true,
+            transparent: true,
+            opacity: 0.92,
+            blending: THREE.AdditiveBlending,
+            depthWrite: false
+        });
+
+        this.spherePoints = new THREE.Points(sphereGeometry, sphereMaterial);
+        this.sphereGroup.add(this.spherePoints);
+
+        // 2. Atmosphere Outer Shimmer Aura Points
+        if (this.tier !== 'LOW') {
+            const auraCount = this.tier === 'HIGH' ? 850 : 400;
+            const auraGeo = new THREE.BufferGeometry();
+            const auraPos = new Float32Array(auraCount * 3);
+            const auraCol = new Float32Array(auraCount * 3);
+
+            for (let i = 0; i < auraCount; i++) {
+                const u = Math.random();
+                const v = Math.random();
+                const theta = u * 2.0 * Math.PI;
+                const phi = Math.acos(2.0 * v - 1.0);
+                const r = sphereRadius + 0.12 + Math.random() * 0.18;
+
+                const i3 = i * 3;
+                auraPos[i3] = r * Math.sin(phi) * Math.cos(theta);
+                auraPos[i3 + 1] = r * Math.cos(phi);
+                auraPos[i3 + 2] = r * Math.sin(phi) * Math.sin(theta);
+
+                // Violet / cyan soft atmosphere
+                if (Math.random() < 0.6) {
+                    auraCol[i3] = 0.0; auraCol[i3 + 1] = 0.7; auraCol[i3 + 2] = 1.0;
+                } else {
+                    auraCol[i3] = 0.55; auraCol[i3 + 1] = 0.25; auraCol[i3 + 2] = 0.95;
+                }
+            }
+
+            auraGeo.setAttribute('position', new THREE.BufferAttribute(auraPos, 3));
+            auraGeo.setAttribute('color', new THREE.BufferAttribute(auraCol, 3));
+
+            const auraMat = new THREE.PointsMaterial({
+                size: 0.05,
+                map: pointTexture,
+                vertexColors: true,
+                transparent: true,
+                opacity: 0.45,
+                blending: THREE.AdditiveBlending,
+                depthWrite: false
+            });
+
+            const auraPoints = new THREE.Points(auraGeo, auraMat);
+            this.sphereGroup.add(auraPoints);
         }
+
+        // Inner Glowing Volume Points for Spherical Depth & Luminescence
+        const innerCount = this.tier === 'LOW' ? 250 : 650;
+        const innerGeo = new THREE.BufferGeometry();
+        const innerPos = new Float32Array(innerCount * 3);
+        const innerCol = new Float32Array(innerCount * 3);
+        for (let i = 0; i < innerCount; i++) {
+            const u = Math.random();
+            const v = Math.random();
+            const theta = u * 2.0 * Math.PI;
+            const phi = Math.acos(2.0 * v - 1.0);
+            const r = 1.35 + Math.random() * 0.45;
+
+            const i3 = i * 3;
+            innerPos[i3] = r * Math.sin(phi) * Math.cos(theta);
+            innerPos[i3 + 1] = r * Math.cos(phi);
+            innerPos[i3 + 2] = r * Math.sin(phi) * Math.sin(theta);
+
+            // Deep luminous violet / cobalt blue
+            innerCol[i3] = 0.28; innerCol[i3 + 1] = 0.18; innerCol[i3 + 2] = 0.95;
+        }
+        innerGeo.setAttribute('position', new THREE.BufferAttribute(innerPos, 3));
+        innerGeo.setAttribute('color', new THREE.BufferAttribute(innerCol, 3));
+        const innerMat = new THREE.PointsMaterial({
+            size: 0.065,
+            map: pointTexture,
+            vertexColors: true,
+            transparent: true,
+            opacity: 0.55,
+            blending: THREE.AdditiveBlending,
+            depthWrite: false
+        });
+        const innerPoints = new THREE.Points(innerGeo, innerMat);
+        this.sphereGroup.add(innerPoints);
+
+        // 3. Thin Orbital Rings & Orbiting Satellite Nodes
+        const ringConfigs = [
+            { radius: 2.55, rot: [0.45, 0.65, 0.0], speed: 0.14, color: 0x00f3ff, opacity: 0.65, satCount: 3, satSpeed: 0.8 },
+            { radius: 2.80, rot: [-0.60, 0.35, 0.4], speed: -0.11, color: 0x9d4edd, opacity: 0.55, satCount: 2, satSpeed: 0.65 },
+            { radius: 3.05, rot: [0.85, -0.45, 0.8], speed: 0.09, color: 0x00d2ff, opacity: 0.58, satCount: 3, satSpeed: 0.75 },
+            { radius: 3.30, rot: [-0.35, 1.15, -0.5], speed: -0.13, color: 0x8a2be2, opacity: 0.45, satCount: 2, satSpeed: 0.55 }
+        ];
+
+        // On LOW tier, use only 2 rings for optimal GPU performance
+        const activeConfigs = this.tier === 'LOW' ? ringConfigs.slice(0, 2) : ringConfigs;
+
+        this.orbitalRings = [];
+        this.satellites = [];
+
+        activeConfigs.forEach((cfg, ringIdx) => {
+            const ringGroup = new THREE.Group();
+            ringGroup.rotation.set(cfg.rot[0], cfg.rot[1], cfg.rot[2]);
+
+            // Create thin smooth circular path
+            const segments = this.tier === 'LOW' ? 48 : 80;
+            const ringGeo = new THREE.BufferGeometry();
+            const ringPoints = new Float32Array((segments + 1) * 3);
+
+            for (let i = 0; i <= segments; i++) {
+                const angle = (i / segments) * Math.PI * 2;
+                ringPoints[i * 3] = cfg.radius * Math.cos(angle);
+                ringPoints[i * 3 + 1] = cfg.radius * Math.sin(angle);
+                ringPoints[i * 3 + 2] = 0;
+            }
+
+            ringGeo.setAttribute('position', new THREE.BufferAttribute(ringPoints, 3));
+
+            const ringMat = new THREE.LineBasicMaterial({
+                color: cfg.color,
+                transparent: true,
+                opacity: cfg.opacity,
+                blending: THREE.AdditiveBlending,
+                linewidth: 1
+            });
+
+            const ringLine = new THREE.Line(ringGeo, ringMat);
+            ringGroup.add(ringLine);
+
+            // Orbiting Satellite Nodes along the ring
+            const satCount = cfg.satCount;
+            const satGeo = new THREE.BufferGeometry();
+            const satPos = new Float32Array(satCount * 3);
+            const satCol = new Float32Array(satCount * 3);
+
+            for (let s = 0; s < satCount; s++) {
+                // Brighter white-cyan core for satellites
+                satCol[s * 3] = 0.85;
+                satCol[s * 3 + 1] = 1.0;
+                satCol[s * 3 + 2] = 1.0;
+            }
+
+            satGeo.setAttribute('position', new THREE.BufferAttribute(satPos, 3));
+            satGeo.setAttribute('color', new THREE.BufferAttribute(satCol, 3));
+
+            const satMat = new THREE.PointsMaterial({
+                size: 0.18,
+                map: pointTexture,
+                vertexColors: true,
+                transparent: true,
+                opacity: 1.0,
+                blending: THREE.AdditiveBlending,
+                depthWrite: false
+            });
+
+            const satPoints = new THREE.Points(satGeo, satMat);
+            ringGroup.add(satPoints);
+
+            this.satellites.push({
+                points: satPoints,
+                radius: cfg.radius,
+                count: satCount,
+                speed: cfg.satSpeed,
+                phaseOffset: ringIdx * 1.5
+            });
+
+            this.orbitalRings.push({
+                group: ringGroup,
+                speed: cfg.speed
+            });
+
+            this.sphereGroup.add(ringGroup);
+        });
+
+        // 4. Interactive Collider (Only for subtle hover, never triggers Studio OS)
+        const colliderGeo = new THREE.SphereGeometry(2.15, 12, 12);
+        const colliderMat = new THREE.MeshBasicMaterial({ visible: false });
+        const collider = new THREE.Mesh(colliderGeo, colliderMat);
+        collider.userData = { id: 'holographic-core', label: 'Holographic Core' };
+        this.sphereGroup.add(collider);
+        this.hotspots = []; // Hotspot array cleared: modal cannot be triggered by canvas clicks
+
+        this.scene.add(this.sphereGroup);
     }
 
     setupDustParticles() {
-        const particleCount = this.tier === 'MEDIUM' ? 50 : 120;
+        const particleCount = this.tier === 'MEDIUM' ? 35 : 60;
         const geometry = new THREE.BufferGeometry();
         const positions = new Float32Array(particleCount * 3);
-        const scales = new Float32Array(particleCount);
 
         for (let i = 0; i < particleCount; i++) {
-            positions[i * 3] = (Math.random() - 0.5) * 10;
-            positions[i * 3 + 1] = Math.random() * 5;
-            positions[i * 3 + 2] = (Math.random() - 0.5) * 8;
-            scales[i] = Math.random() * 0.05 + 0.02;
+            positions[i * 3] = (Math.random() - 0.5) * 14;
+            positions[i * 3 + 1] = (Math.random() - 0.5) * 8;
+            positions[i * 3 + 2] = (Math.random() - 0.5) * 10;
         }
 
         geometry.setAttribute('position', new THREE.BufferAttribute(positions, 3));
-        geometry.setAttribute('scale', new THREE.BufferAttribute(scales, 1));
 
         const material = new THREE.PointsMaterial({
             color: 0x00f3ff,
-            size: 0.05,
+            size: 0.045,
+            map: this.createGlowPointTexture(),
             transparent: true,
-            opacity: 0.55,
-            blending: THREE.AdditiveBlending
+            opacity: 0.4,
+            blending: THREE.AdditiveBlending,
+            depthWrite: false
         });
 
         this.particles = new THREE.Points(geometry, material);
         this.scene.add(this.particles);
     }
 
-    setupInteractiveHotspots() {
-        const hotspotConfigs = [
-            { id: 'monitor', projectId: 'aevonix', pos: [0.12, 1.95, 0.05], label: 'AEVONIX (3D Controller)' },
-            { id: 'laptop', projectId: 'collegespathshala', pos: [-0.9, 1.45, 0.35], label: 'CollegesPathshala' },
-            { id: 'desk_display', projectId: 'vacationvisits', pos: [0.65, 1.38, 0.45], label: 'Vacation Visits' },
-            { id: 'second_display', projectId: 'sagaholidays', pos: [1.15, 1.42, 0.38], label: 'Saga Holidays' },
-            { id: 'terminal', projectId: 'aiautomation', pos: [-0.45, 0.95, 0.2], label: 'AI Automation Hub' }
-        ];
-
-        hotspotConfigs.forEach(cfg => {
-            const group = new THREE.Group();
-            group.position.set(cfg.pos[0], cfg.pos[1], cfg.pos[2]);
-
-            const ringGeo = new THREE.RingGeometry(0.08, 0.12, 24);
-            const ringMat = new THREE.MeshBasicMaterial({
-                color: 0x00f3ff,
-                side: THREE.DoubleSide,
-                transparent: true,
-                opacity: 0.75
-            });
-            const ring = new THREE.Mesh(ringGeo, ringMat);
-            ring.rotation.x = Math.PI / 2;
-            group.add(ring);
-
-            const sphereGeo = new THREE.SphereGeometry(0.25, 12, 12);
-            const sphereMat = new THREE.MeshBasicMaterial({
-                visible: false
-            });
-            const hitSphere = new THREE.Mesh(sphereGeo, sphereMat);
-            hitSphere.userData = { projectId: cfg.projectId, hotspotId: cfg.id, label: cfg.label, group: group, ring: ring };
-            group.add(hitSphere);
-
-            this.scene.add(group);
-            this.hotspots.push(hitSphere);
-        });
+    setSphereHoverState(isHovered) {
+        this.isSphereHovered = isHovered;
+        if (this.spherePoints && this.spherePoints.material) {
+            this.spherePoints.material.size = isHovered ? (this.tier === 'LOW' ? 0.08 : 0.095) : (this.tier === 'LOW' ? 0.065 : 0.08);
+            this.spherePoints.material.opacity = isHovered ? 1.0 : 0.92;
+        }
     }
 
-    loadModel() {
-        if (!THREE.GLTFLoader) {
-            this.dismissLoadingScreen();
-            return;
+    setupPointerInteractions() {
+        const resetBtn = document.getElementById('reset-desk-view-btn');
+        if (resetBtn) {
+            resetBtn.addEventListener('click', (e) => {
+                e.stopPropagation();
+                this.resetDeskView();
+            });
+        }
+    }
+
+    setupVisibilityObserver() {
+        if (this.sceneObserver) {
+            this.sceneObserver.disconnect();
+            this.sceneObserver = null;
         }
 
-        const loader = new THREE.GLTFLoader();
+        const targetElement = this.container || document.body;
+        if ('IntersectionObserver' in window && targetElement) {
+            this.sceneObserver = new IntersectionObserver((entries) => {
+                entries.forEach((entry) => {
+                    const wasVisible = this.isVisible;
+                    this.isVisible = entry.isIntersecting;
 
-        loader.load(
-            'Desk by dook - EtJlOllzbf.glb',
-            (gltf) => {
-                this.model = gltf.scene;
-                this.model.position.set(0, 0, 0);
-                this.model.scale.set(1.4, 1.4, 1.4);
-
-                this.model.traverse((child) => {
-                    if (child.isMesh) {
-                        if (this.tier !== 'LOW') {
-                            child.castShadow = true;
-                            child.receiveShadow = true;
-                        }
-
-                        if (child.material) {
-                            child.material.roughness = Math.max(child.material.roughness || 0.4, 0.35);
-                            child.material.metalness = Math.min(child.material.metalness || 0.2, 0.85);
-
-                            const name = (child.name || '').toLowerCase();
-                            if (name.includes('screen') || name.includes('monitor') || name.includes('display')) {
-                                child.material = new THREE.MeshBasicMaterial({
-                                    map: this.screenTexture
-                                });
-                                this.screenMesh = child;
-                            }
+                    if (this.isVisible && !wasVisible && this.isTabVisible) {
+                        if (!this.animFrameId && !this.isContextLost) {
+                            this.clock.start();
+                            this.animate();
                         }
                     }
                 });
+            }, {
+                root: null,
+                threshold: [0, 0.01]
+            });
+            this.sceneObserver.observe(targetElement);
+        }
 
-                this.scene.add(this.model);
+        document.addEventListener('visibilitychange', () => {
+            const wasTabVisible = this.isTabVisible;
+            this.isTabVisible = !document.hidden;
 
-                if (!this.screenMesh) {
-                    const planeGeo = new THREE.PlaneGeometry(1.45, 0.9);
-                    const planeMat = new THREE.MeshBasicMaterial({
-                        map: this.screenTexture,
-                        side: THREE.DoubleSide
-                    });
-                    const screenPlane = new THREE.Mesh(planeGeo, planeMat);
-                    screenPlane.position.set(0.12, 1.95, 0.02);
-                    this.scene.add(screenPlane);
-                    this.screenMesh = screenPlane;
+            if (this.isTabVisible && !wasTabVisible && this.isVisible) {
+                if (!this.animFrameId && !this.isContextLost) {
+                    this.clock.start();
+                    this.animate();
                 }
-
-                this.dismissLoadingScreen();
-            },
-            (xhr) => {
-                const percent = Math.round((xhr.loaded / (xhr.total || 2080000)) * 100);
-                const progressBar = document.getElementById('loading-bar-fill');
-                if (progressBar) {
-                    progressBar.style.width = `${Math.min(100, percent)}%`;
-                }
-            },
-            (error) => {
-                console.warn('GLB asset loading notice:', error);
-                this.dismissLoadingScreen();
             }
-        );
+        }, { passive: true });
+    }
 
-        setTimeout(() => this.dismissLoadingScreen(), 2200);
+    handleRaycastClick(e) {
+        if (this.interactionManager) {
+            this.interactionManager.handleRaycastClick(e);
+        }
+    }
+
+    // Public API preserved for VirtualOS.js and Main.js
+    focusOnMonitor() {
+        if (!this.previousCameraState && this.camera && this.controls) {
+            this.previousCameraState = {
+                pos: { x: this.camera.position.x, y: this.camera.position.y, z: this.camera.position.z },
+                target: { x: this.controls.target.x, y: this.controls.target.y, z: this.controls.target.z }
+            };
+        }
+        if (this.cameraDirector) {
+            this.cameraDirector.transitionTo('STUDIO', null, 1.0);
+        }
+    }
+
+    exitMonitorFocus() {
+        if (this.cameraDirector) {
+            const stateName = this.currentSection.toUpperCase();
+            const target = this.previousCameraState ? {
+                x: this.previousCameraState.pos.x,
+                y: this.previousCameraState.pos.y,
+                z: this.previousCameraState.pos.z,
+                targetX: this.previousCameraState.target.x,
+                targetY: this.previousCameraState.target.y,
+                targetZ: this.previousCameraState.target.z
+            } : null;
+            this.previousCameraState = null;
+            this.cameraDirector.transitionTo(stateName, target, 1.0);
+        }
+    }
+
+    resetDeskView() {
+        if (window.triggerHaptic) window.triggerHaptic('reset');
+
+        this.deskTransform.dragRotation.x = 0;
+        this.deskTransform.dragRotation.y = 0;
+        this.dragVelocity.x = 0;
+        this.dragVelocity.y = 0;
+
+        if (this.cameraDirector) {
+            this.cameraDirector.transitionTo(this.currentSection.toUpperCase(), null, 0.85);
+        }
+
+        const resetBtn = document.getElementById('reset-desk-view-btn');
+        if (resetBtn) {
+            resetBtn.classList.remove('visible');
+            resetBtn.style.opacity = '0';
+        }
+    }
+
+    onWindowResize() {
+        if (!this.camera || !this.renderer) return;
+        this.updateCameraForViewport();
+        this.renderer.setSize(window.innerWidth, window.innerHeight);
+    }
+
+    transitionToSection(sectionKey) {
+        this.currentSection = sectionKey;
+        const stateName = sectionKey.toUpperCase();
+        if (this.cameraDirector) {
+            this.cameraDirector.transitionTo(stateName);
+        }
+    }
+
+    focusOnProjectObject(project) {
+        if (!project || !this.cameraDirector) return;
+        this.cameraDirector.transitionTo('PROJECT_DETAIL', null, 1.0);
+    }
+
+    toggleDeskLamp() {
+        this.coreIlluminationMode = !this.coreIlluminationMode;
+        if (this.keyLight) {
+            this.keyLight.intensity = this.coreIlluminationMode ? 1.4 : 0.4;
+        }
+        if (this.rimLight) {
+            this.rimLight.intensity = this.coreIlluminationMode ? 3.5 : 1.2;
+        }
+        if (this.spherePoints && this.spherePoints.material) {
+            this.spherePoints.material.opacity = this.coreIlluminationMode ? 0.92 : 0.65;
+        }
+        return this.coreIlluminationMode;
+    }
+
+    setQualityTier(newTier) {
+        if (!['HIGH', 'MEDIUM', 'LOW', 'FALLBACK'].includes(newTier)) return;
+        this.tier = newTier;
+        localStorage.setItem('portfolio_quality', newTier);
+
+        if (newTier === 'FALLBACK') {
+            this.activate2DFallback();
+        } else {
+            document.body.classList.remove('fallback-2d-mode');
+            const fallbackBanner = document.getElementById('fallback-2d-banner');
+            if (fallbackBanner) fallbackBanner.style.display = 'none';
+            if (this.container) this.container.style.display = 'block';
+
+            // Rebuild holographic sphere with new tier particle counts
+            if (this.sphereGroup && this.scene) {
+                this.scene.remove(this.sphereGroup);
+            }
+            this.setupHolographicSphere();
+        }
     }
 
     dismissLoadingScreen() {
@@ -683,7 +1210,7 @@ class StudioScene {
             loadingIndicator.classList.add('fade-out');
             setTimeout(() => {
                 loadingIndicator.style.display = 'none';
-            }, 400);
+            }, 300);
         }
     }
 
@@ -691,7 +1218,7 @@ class StudioScene {
         document.body.classList.add('fallback-2d-mode');
         const webglCont = document.getElementById('webgl-container');
         if (webglCont) webglCont.style.display = 'none';
-        
+
         const fallbackBanner = document.getElementById('fallback-2d-banner');
         if (fallbackBanner) fallbackBanner.style.display = 'flex';
 
@@ -714,456 +1241,18 @@ class StudioScene {
         const globalProgress = Math.min(1, Math.max(0, scrollY / totalHeight));
         this.scrollState.progress = globalProgress;
 
-        // Progressive scroll transform across hero and transition sections (first 2 viewports)
-        const heroThreshold = Math.max(window.innerHeight * 2.0, 1000);
-        const heroProgress = Math.min(1, Math.max(0, scrollY / heroThreshold));
-
-        // When scrolling down, smoothly rotate the desk along Y with a natural ease curve
-        const maxScrollRotY = this.deviceProfile.isMobile ? 0.35 : 0.45;
-        const maxScrollRotX = this.deviceProfile.isMobile ? 0.08 : 0.12;
-
-        // Harmonic sine wave: progressive rotation during hero, settles at resting angle
-        const easeScrollY = Math.sin(heroProgress * Math.PI * 0.5);
-
-        this.deskTransform.scrollRotation.y = easeScrollY * maxScrollRotY;
-        this.deskTransform.scrollRotation.x = Math.sin(heroProgress * Math.PI) * maxScrollRotX;
-
-        // Small subtle vertical & depth translation with scroll
-        this.deskTransform.scrollPosition.y = -heroProgress * 0.12;
-        this.deskTransform.scrollPosition.z = -heroProgress * 0.08;
-    }
-
-    setupPointerInteractions() {
-        const resetBtn = document.getElementById('reset-desk-view-btn');
-        const hintPill = document.getElementById('drag-hint-pill');
-
-        if (localStorage.getItem('portfolio_3d_hint_seen') === 'true' && hintPill) {
-            hintPill.style.display = 'none';
-        } else if (hintPill) {
-            setTimeout(() => {
-                if (hintPill) hintPill.classList.add('fade-out');
-            }, 5500);
-        }
-
-        const isInteractiveElement = (target) => {
-            if (!target) return false;
-            return target.closest('a, button, input, textarea, select, label, form, .navbar, .os-window, .os-taskbar, .os-desktop-shortcut, .btn-primary, .btn-ghost, .preview-thumb, .switcher-btn, .mini-music-pill, .expanded-music-card, .audio-dock, .project-card, .interactive-terminal, .project-actions, .nav-btn, .filter-chip');
-        };
-
-        const onPointerDown = (e) => {
-            if (isInteractiveElement(e.target)) return;
-
-            this.pointerState.isDown = true;
-            this.pointerState.pointerId = e.pointerId;
-            this.pointerState.startX = e.clientX;
-            this.pointerState.startY = e.clientY;
-            this.pointerState.lastX = e.clientX;
-            this.pointerState.lastY = e.clientY;
-            this.pointerState.hasMoved = false;
-            this.pointerState.pointerType = e.pointerType || (this.deviceProfile.isTouch ? 'touch' : 'mouse');
-            this.pointerState.mode = this.pointerState.pointerType === 'touch' ? 'DECIDING' : '3D_DRAG';
-
-            if (this.pointerState.pointerType !== 'touch') {
-                document.body.style.cursor = 'grabbing';
-            }
-        };
-
-        const onPointerMove = (e) => {
-            // Cursor Parallax Coordinates Normalized (-1 to +1)
-            this.mouse.targetX = (e.clientX / window.innerWidth - 0.5) * 2;
-            this.mouse.targetY = -(e.clientY / window.innerHeight - 0.5) * 2;
-
-            this.mouseVector.x = (e.clientX / window.innerWidth) * 2 - 1;
-            this.mouseVector.y = -(e.clientY / window.innerHeight) * 2 + 1;
-
-            // Update Desktop Cursor Transform Contribution (subtle micro-tilt & parallax)
-            if (!this.deviceProfile.isTouch) {
-                const maxCursorRotY = 0.16; // ~9 deg horizontal parallax
-                const maxCursorRotX = 0.10; // ~6 deg vertical tilt
-                this.deskTransform.cursorRotation.y = this.mouse.targetX * maxCursorRotY;
-                this.deskTransform.cursorRotation.x = -this.mouse.targetY * maxCursorRotX;
-                this.deskTransform.cursorPosition.x = this.mouse.targetX * 0.05;
-                this.deskTransform.cursorPosition.y = this.mouse.targetY * 0.03;
-            }
-
-            // Hotspot Raycast Hover Detection on Desktop
-            if (!this.pointerState.isDown && this.hotspots.length > 0 && this.camera && !this.deviceProfile.isTouch) {
-                const now = performance.now();
-                if (!this.lastRaycast || (now - this.lastRaycast >= 45)) {
-                    this.lastRaycast = now;
-                    this.raycaster.setFromCamera(this.mouseVector, this.camera);
-                    const intersects = this.raycaster.intersectObjects(this.hotspots);
-
-                    if (intersects.length > 0) {
-                        const hit = intersects[0].object;
-                        if (this.hoveredHotspot !== hit) {
-                            this.hoveredHotspot = hit;
-                            document.body.style.cursor = 'pointer';
-                            if (hit.userData.ring) {
-                                hit.userData.ring.material.color.setHex(0x00ff9d);
-                                hit.userData.ring.scale.set(1.3, 1.3, 1.3);
-                            }
-                            if (window.triggerHaptic) window.triggerHaptic('hotspot');
-                        }
-                    } else if (this.hoveredHotspot) {
-                        if (this.hoveredHotspot.userData.ring) {
-                            this.hoveredHotspot.userData.ring.material.color.setHex(0x00f3ff);
-                            this.hoveredHotspot.userData.ring.scale.set(1, 1, 1);
-                        }
-                        this.hoveredHotspot = null;
-                        document.body.style.cursor = 'default';
-                    }
-                }
-            }
-
-            if (!this.pointerState.isDown) return;
-
-            const deltaX = e.clientX - this.pointerState.startX;
-            const deltaY = e.clientY - this.pointerState.startY;
-
-            // Gesture Arbitration for Touch on Mobile
-            if (this.pointerState.mode === 'DECIDING') {
-                const dist = Math.hypot(deltaX, deltaY);
-                if (dist > 9) {
-                    if (Math.abs(deltaX) > Math.abs(deltaY) * 1.15) {
-                        // Horizontal swipe -> Engage 3D Manual Rotation!
-                        this.pointerState.mode = '3D_DRAG';
-                        if (window.triggerHaptic) window.triggerHaptic('desk');
-                        if (hintPill) hintPill.classList.add('fade-out');
-                        localStorage.setItem('portfolio_3d_hint_seen', 'true');
-                    } else {
-                        // Vertical swipe -> Release to native page scrolling (which drives scrollRotation automatically)
-                        this.pointerState.mode = 'PAGE_SCROLL';
-                    }
-                }
-            }
-
-            // 3D Desk Manual Drag Rotation
-            if (this.pointerState.mode === '3D_DRAG') {
-                const dx = e.clientX - this.pointerState.lastX;
-                const dy = e.clientY - this.pointerState.lastY;
-
-                if (Math.hypot(dx, dy) > 2) {
-                    this.pointerState.hasMoved = true;
-                }
-
-                const sensX = this.pointerState.pointerType === 'touch' ? 0.0075 : 0.0055;
-                const sensY = this.pointerState.pointerType === 'touch' ? 0.0045 : 0.0035;
-
-                this.deskTransform.dragRotation.y = Math.max(
-                    -0.65,
-                    Math.min(0.65, this.deskTransform.dragRotation.y + dx * sensX)
-                );
-                this.deskTransform.dragRotation.x = Math.max(
-                    -0.28,
-                    Math.min(0.28, this.deskTransform.dragRotation.x + dy * sensY)
-                );
-
-                if (resetBtn && (Math.abs(this.deskTransform.dragRotation.y) > 0.04 || Math.abs(this.deskTransform.dragRotation.x) > 0.04)) {
-                    resetBtn.classList.add('visible');
-                }
-
-                if (hintPill && !hintPill.classList.contains('fade-out')) {
-                    hintPill.classList.add('fade-out');
-                    localStorage.setItem('portfolio_3d_hint_seen', 'true');
-                }
-            }
-
-            this.pointerState.lastX = e.clientX;
-            this.pointerState.lastY = e.clientY;
-        };
-
-        const onPointerUp = (e) => {
-            if (!this.pointerState.isDown) return;
-
-            if (!this.pointerState.hasMoved && !isInteractiveElement(e.target)) {
-                this.handleRaycastClick(e);
-            }
-
-            this.pointerState.isDown = false;
-            this.pointerState.mode = 'IDLE';
-
-            if (this.pointerState.pointerType !== 'touch') {
-                document.body.style.cursor = 'default';
-            }
-        };
-
-        const onMouseLeave = () => {
-            this.mouse.targetX = 0;
-            this.mouse.targetY = 0;
-            this.deskTransform.cursorRotation.y = 0;
-            this.deskTransform.cursorRotation.x = 0;
-            this.deskTransform.cursorPosition.x = 0;
-            this.deskTransform.cursorPosition.y = 0;
-        };
-
-        window.addEventListener('pointerdown', onPointerDown, { passive: true });
-        window.addEventListener('pointermove', onPointerMove, { passive: true });
-        window.addEventListener('pointerup', onPointerUp, { passive: true });
-        window.addEventListener('pointercancel', onPointerUp, { passive: true });
-        document.addEventListener('mouseleave', onMouseLeave, { passive: true });
-
-        // Native scroll fallback (in addition to Lenis synchronization)
-        window.addEventListener('scroll', () => this.onScroll(window.scrollY), { passive: true });
-
-        if (resetBtn) {
-            resetBtn.addEventListener('click', (e) => {
-                e.stopPropagation();
-                this.resetDeskView();
-            });
-        }
-    }
-
-    setupVisibilityObserver() {
-        if (this.sceneObserver) {
-            this.sceneObserver.disconnect();
-            this.sceneObserver = null;
-        }
-
-        // 1. Observe Hero Section / 3D Canvas
-        const targetElement = document.getElementById('home') || this.container;
-        if ('IntersectionObserver' in window && targetElement) {
-            this.sceneObserver = new IntersectionObserver((entries) => {
-                entries.forEach((entry) => {
-                    const wasVisible = this.isVisible;
-                    this.isVisible = entry.isIntersecting;
-
-                    if (this.isVisible && !wasVisible && this.isTabVisible) {
-                        if (!this.animFrameId && !this.isContextLost) {
-                            this.clock.start();
-                            this.animate();
-                        }
-                    }
-                });
-            }, {
-                root: null,
-                rootMargin: '100px 0px 100px 0px',
-                threshold: [0, 0.01]
-            });
-            this.sceneObserver.observe(targetElement);
-        }
-
-        // 2. Document Visibility API
-        document.addEventListener('visibilitychange', () => {
-            const wasTabVisible = this.isTabVisible;
-            this.isTabVisible = !document.hidden;
-
-            if (this.isTabVisible && !wasTabVisible && this.isVisible) {
-                if (!this.animFrameId && !this.isContextLost) {
-                    this.clock.start();
-                    this.animate();
-                }
-            }
-        }, { passive: true });
-    }
-
-    handleRaycastClick(e) {
-        if (!this.camera || this.hotspots.length === 0) return;
-
-        this.mouseVector.x = (e.clientX / window.innerWidth) * 2 - 1;
-        this.mouseVector.y = -(e.clientY / window.innerHeight) * 2 + 1;
-        this.raycaster.setFromCamera(this.mouseVector, this.camera);
-        const intersects = this.raycaster.intersectObjects(this.hotspots);
-
-        if (intersects.length > 0) {
-            const hit = intersects[0].object;
-            const hotspotId = hit.userData.hotspotId;
-            const pId = hit.userData.projectId;
-
-            if (window.triggerHaptic) window.triggerHaptic('hotspot');
-
-            if (hotspotId === 'monitor') {
-                if (window.virtualOS) {
-                    window.virtualOS.enterComputer();
-                    return;
-                }
-            }
-
-            if (pId && window.selectProjectById) {
-                window.selectProjectById(pId);
-                const projSec = document.getElementById('projects');
-                if (projSec && window.scrollY < projSec.offsetTop - 200) {
-                    projSec.scrollIntoView({ behavior: 'smooth' });
-                }
-            }
-        }
-    }
-
-    focusOnMonitor() {
-        if (!this.camera || !this.controls) return;
-
-        if (!this.previousCameraState) {
-            this.previousCameraState = {
-                pos: { x: this.camera.position.x, y: this.camera.position.y, z: this.camera.position.z },
-                target: { x: this.controls.target.x, y: this.controls.target.y, z: this.controls.target.z }
-            };
-        }
-
-        this.controls.enabled = false;
-
-        const monitorPos = { x: 0.12, y: 1.95, z: 1.55 };
-        const monitorTarget = { x: 0.12, y: 1.95, z: 0.02 };
-
-        if (window.gsap) {
-            window.gsap.to(this.camera.position, {
-                x: monitorPos.x,
-                y: monitorPos.y,
-                z: monitorPos.z,
-                duration: 1.0,
-                ease: "power2.inOut"
-            });
-            window.gsap.to(this.controls.target, {
-                x: monitorTarget.x,
-                y: monitorTarget.y,
-                z: monitorTarget.z,
-                duration: 1.0,
-                ease: "power2.inOut"
-            });
-        } else {
-            this.camera.position.set(monitorPos.x, monitorPos.y, monitorPos.z);
-            this.controls.target.set(monitorTarget.x, monitorTarget.y, monitorTarget.z);
-        }
-    }
-
-    exitMonitorFocus() {
-        if (!this.camera || !this.controls) return;
-
-        this.controls.enabled = true;
-
-        const preset = this.getCameraPreset(this.currentSection);
-        const restorePos = this.previousCameraState ? this.previousCameraState.pos : preset;
-        const restoreTarget = this.previousCameraState ? this.previousCameraState.target : { x: preset.targetX, y: preset.targetY, z: preset.targetZ };
-        this.previousCameraState = null;
-
-        if (window.gsap) {
-            window.gsap.to(this.camera.position, {
-                x: restorePos.x,
-                y: restorePos.y,
-                z: restorePos.z,
-                duration: 1.0,
-                ease: "power2.inOut"
-            });
-            window.gsap.to(this.controls.target, {
-                x: restoreTarget.x,
-                y: restoreTarget.y,
-                z: restoreTarget.z,
-                duration: 1.0,
-                ease: "power2.inOut"
-            });
-        } else {
-            this.camera.position.set(restorePos.x, restorePos.y, restorePos.z);
-            this.controls.target.set(restoreTarget.x, restoreTarget.y, restoreTarget.z);
-        }
-    }
-
-    resetDeskView() {
-        if (window.triggerHaptic) window.triggerHaptic('reset');
-        const p = this.getCameraPreset(this.currentSection);
-        
-        // Reset manual drag offset smoothly
-        this.deskTransform.dragRotation.x = 0;
-        this.deskTransform.dragRotation.y = 0;
-
-        if (window.gsap) {
-            if (this.camera && this.controls) {
-                window.gsap.to(this.camera.position, { x: p.x, y: p.y, z: p.z, duration: 0.85, ease: "power2.out" });
-                window.gsap.to(this.controls.target, { x: p.targetX, y: p.targetY, z: p.targetZ, duration: 0.85, ease: "power2.out" });
-            }
-        } else {
-            if (this.camera && this.controls) {
-                this.camera.position.set(p.x, p.y, p.z);
-                this.controls.target.set(p.targetX, p.targetY, p.targetZ);
-            }
-        }
-
-        const resetBtn = document.getElementById('reset-desk-view-btn');
-        if (resetBtn) {
-            resetBtn.classList.remove('visible');
-            resetBtn.style.opacity = '0';
-        }
-    }
-
-    onWindowResize() {
-        if (!this.camera || !this.renderer) return;
-        this.updateCameraForViewport();
-        this.renderer.setSize(window.innerWidth, window.innerHeight);
-    }
-
-    transitionToSection(sectionKey) {
-        if (this.currentSection === sectionKey) return;
-        this.currentSection = sectionKey;
-        const target = this.getCameraPreset(sectionKey);
-
-        const prefersReducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
-        const duration = prefersReducedMotion ? 0.1 : 1.4;
-
-        if (window.gsap && this.camera && this.controls) {
-            window.gsap.to(this.camera.position, {
-                x: target.x,
-                y: target.y,
-                z: target.z,
-                duration: duration,
-                ease: "power2.inOut"
-            });
-            window.gsap.to(this.controls.target, {
-                x: target.targetX,
-                y: target.targetY,
-                z: target.targetZ,
-                duration: duration,
-                ease: "power2.inOut"
-            });
-        }
-    }
-
-    focusOnProjectObject(project) {
-        if (!project || !project.cameraPosition || !this.camera || !this.controls) return;
-        const pos = project.cameraPosition;
-        const target = project.cameraTarget;
-
-        const prefersReducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
-        const duration = prefersReducedMotion ? 0.1 : 1.0;
-
-        if (window.gsap) {
-            window.gsap.to(this.camera.position, {
-                x: pos.x,
-                y: pos.y,
-                z: pos.z,
-                duration: duration,
-                ease: "power2.out"
-            });
-            window.gsap.to(this.controls.target, {
-                x: target.x,
-                y: target.y,
-                z: target.z,
-                duration: duration,
-                ease: "power2.out"
-            });
-        }
-    }
-
-    toggleDeskLamp() {
-        this.deskLampOn = !this.deskLampOn;
-        if (this.lampLight) {
-            this.lampLight.intensity = this.deskLampOn ? 4.5 : 0.2;
-        }
-        return this.deskLampOn;
-    }
-
-    setQualityTier(newTier) {
-        if (!['HIGH', 'MEDIUM', 'LOW', 'FALLBACK'].includes(newTier)) return;
-        this.tier = newTier;
-        localStorage.setItem('portfolio_quality', newTier);
-        
-        if (newTier === 'FALLBACK') {
-            this.activate2DFallback();
-        } else {
-            document.body.classList.remove('fallback-2d-mode');
-            const fallbackBanner = document.getElementById('fallback-2d-banner');
-            if (fallbackBanner) fallbackBanner.style.display = 'none';
-            if (this.container) this.container.style.display = 'block';
-            this.isInitialized = false;
-            this.startProgressiveInit();
-        }
+        // Continuous cinematic scroll sequence across entire portfolio (0% to 100%)
+        const isMobile = this.deviceProfile.isMobile;
+        const maxScrollRotY = isMobile ? Math.PI * 1.5 : Math.PI * 2.0;
+        const maxScrollRotX = isMobile ? 0.22 : 0.32;
+
+        // Smooth continuous progressive rotation that scrubs with page scroll
+        this.deskTransform.scrollRotation.y = globalProgress * maxScrollRotY;
+        this.deskTransform.scrollRotation.x = Math.sin(globalProgress * Math.PI * 2.0) * maxScrollRotX;
+
+        // Subtle undulating spatial depth & height across sections
+        this.deskTransform.scrollPosition.y = Math.sin(globalProgress * Math.PI) * -0.3;
+        this.deskTransform.scrollPosition.z = Math.sin(globalProgress * Math.PI * 2.0) * 0.2;
     }
 
     monitorRuntimePerformance(frameTime) {
@@ -1203,7 +1292,6 @@ class StudioScene {
     animate() {
         if (this.isContextLost) return;
 
-        // If 3D Scene is outside viewport or browser tab is hidden, halt RAF loop to save GPU & battery
         if (!this.isVisible || !this.isTabVisible) {
             if (this.animFrameId) {
                 cancelAnimationFrame(this.animFrameId);
@@ -1218,32 +1306,57 @@ class StudioScene {
         const delta = this.clock.getDelta();
         const elapsedTime = this.clock.getElapsedTime();
 
-        // Cursor Parallax Smoothing for Desktop
-        if (!this.deviceProfile.isTouch) {
-            this.mouse.x += (this.mouse.targetX - this.mouse.x) * 0.05;
-            this.mouse.y += (this.mouse.targetY - this.mouse.y) * 0.05;
+        const prefersReducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+        const motionScale = prefersReducedMotion ? 0.15 : 1.0;
+
+        if (this.interactionManager) {
+            this.interactionManager.update(elapsedTime);
         }
 
-        // Frame-Rate Independent Unified Multi-Input Physical Desk Interpolation
-        // Target: Combined (BASE + SCROLL + CURSOR + DRAG)
+        // Swipe drag inertia settle
+        if (this.interactionManager && !this.interactionManager.pointer.isDown) {
+            this.dragVelocity.x *= 0.92;
+            this.dragVelocity.y *= 0.92;
+            this.deskTransform.dragRotation.y += this.dragVelocity.x * 0.005;
+            this.deskTransform.dragRotation.x += this.dragVelocity.y * 0.005;
+        }
+
+        // 1. Slow, majestic continuous planetary core spin
+        this.deskTransform.baseRotation.y += delta * 0.08 * motionScale;
+
+        // 2. Orbital Rings & Satellites Animation
+        this.orbitalRings.forEach(r => {
+            r.group.rotation.z += delta * r.speed * motionScale;
+        });
+
+        this.satellites.forEach(sat => {
+            const posAttr = sat.points.geometry.attributes.position;
+            const positions = posAttr.array;
+            for (let i = 0; i < sat.count; i++) {
+                const angle = (elapsedTime * sat.speed * motionScale) + sat.phaseOffset + (i / sat.count) * Math.PI * 2;
+                positions[i * 3] = sat.radius * Math.cos(angle);
+                positions[i * 3 + 1] = sat.radius * Math.sin(angle);
+                positions[i * 3 + 2] = 0;
+            }
+            posAttr.needsUpdate = true;
+        });
+
+        // 3. Multi-Input Physical LERP (Smooth Inertia Damping)
         if (this.model) {
             const t = this.deskTransform;
 
-            // Combine rotations
             let targetRotX = t.baseRotation.x + t.scrollRotation.x + (this.deviceProfile.isTouch ? 0 : t.cursorRotation.x) + t.dragRotation.x;
             let targetRotY = t.baseRotation.y + t.scrollRotation.y + (this.deviceProfile.isTouch ? 0 : t.cursorRotation.y) + t.dragRotation.y;
             let targetRotZ = t.baseRotation.z + t.scrollRotation.z;
 
-            // Combine positions
             let targetPosX = t.basePosition.x + (this.deviceProfile.isTouch ? 0 : t.cursorPosition.x);
             let targetPosY = t.basePosition.y + t.scrollPosition.y + (this.deviceProfile.isTouch ? 0 : t.cursorPosition.y);
             let targetPosZ = t.basePosition.z + t.scrollPosition.z;
 
-            // Clamp combined targets within safety bounds
-            targetRotX = Math.max(t.limits.minRotX, Math.min(t.limits.maxRotX, targetRotX));
-            targetRotY = Math.max(t.limits.minRotY, Math.min(t.limits.maxRotY, targetRotY));
-            targetPosX = Math.max(t.limits.minPosX, Math.min(t.limits.maxPosX, targetPosX));
-            targetPosY = Math.max(t.limits.minPosY, Math.min(t.limits.maxPosY, targetPosY));
+            // Hover subtle elevation
+            if (this.isSphereHovered) {
+                targetPosZ += 0.15;
+            }
 
             // Smooth physical LERP (0.075 easing for weighted natural inertia)
             t.currentRotation.x += (targetRotX - t.currentRotation.x) * 0.075;
@@ -1254,7 +1367,6 @@ class StudioScene {
             t.currentPosition.y += (targetPosY - t.currentPosition.y) * 0.075;
             t.currentPosition.z += (targetPosZ - t.currentPosition.z) * 0.075;
 
-            // Apply transforms to the 3D model
             this.model.rotation.x = t.currentRotation.x;
             this.model.rotation.y = t.currentRotation.y;
             this.model.rotation.z = t.currentRotation.z;
@@ -1269,23 +1381,9 @@ class StudioScene {
         }
 
         if (this.particles) {
-            this.particles.rotation.y = elapsedTime * 0.015;
-            this.particles.position.y = Math.sin(elapsedTime * 0.5) * 0.04;
+            this.particles.rotation.y = elapsedTime * 0.012 * motionScale;
+            this.particles.position.y = Math.sin(elapsedTime * 0.4) * 0.05;
         }
-
-        this.hotspots.forEach((hit, idx) => {
-            if (hit.userData.ring) {
-                const pulse = 1 + Math.sin(elapsedTime * 3 + idx * 1.2) * 0.15;
-                hit.userData.ring.scale.set(pulse, pulse, pulse);
-            }
-        });
-
-        if (this.neonLight && this.tier !== 'LOW') {
-            const flicker = Math.sin(elapsedTime * 12) * 0.08 + Math.sin(elapsedTime * 2.3) * 0.15;
-            this.neonLight.intensity = 3.2 + (Math.random() < 0.008 ? -1.2 : flicker);
-        }
-
-        this.renderScreenContent(elapsedTime);
 
         if (this.renderer && this.scene && this.camera) {
             this.renderer.render(this.scene, this.camera);

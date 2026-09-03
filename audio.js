@@ -13,6 +13,16 @@ class AmbientMusicSystem {
         this.autoMinimizeTimer = null;
         this.isExpanded = false;
         
+        // Exact Audio Clock Synchronization Properties
+        this.trackElapsed = 0.0;
+        this.trackDuration = 32.0;
+        this.lastTickTime = null;
+        this.chordStep = 0;
+        this.playlist = [];
+        this.playlistIndex = 0;
+        this.isEnded = false;
+        this.eventListeners = {};
+        
         // Restore volume preference if present
         const savedVol = localStorage.getItem('portfolio_audio_volume');
         if (savedVol !== null) {
@@ -36,7 +46,7 @@ class AmbientMusicSystem {
                     [110.00, 130.81, 164.81, 196.00, 246.94]  // Am9
                 ],
                 timbre: "warm_rhodes",
-                tempoSec: 3.6
+                tempoSec: 4.0
             },
             {
                 id: "ambient-02",
@@ -50,7 +60,7 @@ class AmbientMusicSystem {
                     [123.47, 185.00, 220.00, 293.66, 370.00]  // Bm7(b13)
                 ],
                 timbre: "ambient_pad",
-                tempoSec: 4.2
+                tempoSec: 4.0
             },
             {
                 id: "ambient-03",
@@ -64,7 +74,7 @@ class AmbientMusicSystem {
                     [130.81, 196.00, 261.63, 329.63, 392.00]  // Cmaj7
                 ],
                 timbre: "analog_soft",
-                tempoSec: 3.8
+                tempoSec: 4.0
             },
             {
                 id: "ambient-04",
@@ -78,7 +88,7 @@ class AmbientMusicSystem {
                     [110.00, 164.81, 220.00, 246.94, 329.63]  // Asus4(9)
                 ],
                 timbre: "shimmer_reverb",
-                tempoSec: 4.5
+                tempoSec: 4.0
             },
             {
                 id: "ambient-05",
@@ -100,13 +110,13 @@ class AmbientMusicSystem {
                 genre: "Warm Tape Saturation",
                 bpm: 62,
                 chords: [
-                    [164.81, 196.00, 246.94, 293.66, 392.00], // Em7
-                    [130.81, 164.81, 196.00, 246.94, 329.63], // Cmaj9
-                    [146.83, 174.61, 220.00, 261.63, 329.63], // Dm9
-                    [98.00, 146.83, 196.00, 246.94, 293.66]   // G6
+                    [98.00, 146.83, 196.00, 246.94, 293.66],  // Gmaj7
+                    [110.00, 164.81, 220.00, 261.63, 329.63], // Am7
+                    [123.47, 185.00, 220.00, 293.66, 370.00], // Bm7
+                    [130.81, 196.00, 246.94, 293.66, 392.00]  // Cmaj7
                 ],
-                timbre: "tape_analog",
-                tempoSec: 3.9
+                timbre: "analog_soft",
+                tempoSec: 4.0
             },
             {
                 id: "ambient-07",
@@ -138,14 +148,70 @@ class AmbientMusicSystem {
             }
         ];
 
-        this.playlist = [];
-        this.playlistIndex = 0;
-        this.chordStep = 0;
         this.shufflePlaylist();
+        this.updateCurrentTrackDuration();
 
         // Check if sound was previously enabled or blocked
         const savedPref = localStorage.getItem('portfolio_sound_enabled');
         this.soundPreference = savedPref !== 'false';
+    }
+
+    // Standard HTMLAudioElement properties
+    get currentTime() {
+        if (this.isPlaying && this.lastTickTime !== null) {
+            const now = performance.now();
+            const delta = (now - this.lastTickTime) / 1000;
+            return Math.min(this.trackDuration, this.trackElapsed + delta);
+        }
+        return this.trackElapsed;
+    }
+
+    set currentTime(val) {
+        this.trackElapsed = Math.max(0, Math.min(this.trackDuration, val));
+        this.lastTickTime = performance.now();
+        this.dispatchEvent('timeupdate');
+    }
+
+    get duration() {
+        return this.trackDuration;
+    }
+
+    get paused() {
+        return !this.isPlaying;
+    }
+
+    get ended() {
+        return this.isEnded;
+    }
+
+    // Standard Event Handling
+    addEventListener(event, callback) {
+        if (!this.eventListeners[event]) {
+            this.eventListeners[event] = [];
+        }
+        this.eventListeners[event].push(callback);
+    }
+
+    removeEventListener(event, callback) {
+        if (!this.eventListeners[event]) return;
+        this.eventListeners[event] = this.eventListeners[event].filter(fn => fn !== callback);
+    }
+
+    dispatchEvent(eventName, detail = {}) {
+        const listeners = this.eventListeners[eventName];
+        if (listeners) {
+            listeners.forEach(fn => {
+                try { fn({ type: eventName, target: this, ...detail }); } catch (e) { console.error(e); }
+            });
+        }
+    }
+
+    updateCurrentTrackDuration() {
+        const track = this.getCurrentTrack();
+        // 8 chord steps per full track progression
+        this.trackDuration = (track ? track.tempoSec : 4.0) * 8;
+        this.dispatchEvent('durationchange');
+        this.dispatchEvent('loadedmetadata');
     }
 
     shufflePlaylist() {
@@ -157,7 +223,7 @@ class AmbientMusicSystem {
             [indices[i], indices[j]] = [indices[j], indices[i]];
         }
 
-        if (this.playlist.length > 0 && indices[0] === this.playlist[this.playlist.length - 1]) {
+        if (this.playlist && this.playlist.length > 0 && indices[0] === this.playlist[this.playlist.length - 1]) {
             [indices[0], indices[1]] = [indices[1], indices[0]];
         }
 
@@ -187,25 +253,76 @@ class AmbientMusicSystem {
             this.masterGain.connect(this.analyser);
             this.analyser.connect(this.ctx.destination);
 
-            this.createSubtleVinylNoise();
+            this.startSubtleNoiseBed();
+
+            // Monitor browser tab visibility changes for Audio Context suspension
+            document.addEventListener('visibilitychange', () => {
+                if (document.hidden) {
+                    this.suspendAudio();
+                } else {
+                    this.resumeAudio();
+                }
+            }, { passive: true });
         } catch (e) {
             console.warn('AudioContext initialization failed or blocked by policy:', e);
         }
+    }
+
+    suspendAudio() {
+        if (this.trackTimer) {
+            clearTimeout(this.trackTimer);
+            this.trackTimer = null;
+        }
+        this.stopAllActiveNodes();
+        if (this.ctx && this.ctx.state === 'running') {
+            this.ctx.suspend().catch(() => {});
+        }
+    }
+
+    resumeAudio() {
+        if (!this.isPlaying) return;
+        if (this.ctx && this.ctx.state === 'suspended') {
+            this.ctx.resume().catch((err) => {
+                console.warn('AudioContext resume notice:', err);
+            });
+        }
+        if (!this.trackTimer) {
+            this.playProgression();
+        }
+    }
+
+    stopAllActiveNodes() {
+        this.activeNodes.forEach(nodes => {
+            try {
+                if (nodes.osc) {
+                    nodes.osc.stop();
+                    nodes.osc.disconnect();
+                }
+                if (nodes.filter) nodes.filter.disconnect();
+                if (nodes.gain) nodes.gain.disconnect();
+            } catch (e) {}
+        });
+        this.activeNodes = [];
     }
 
     setVolume(val) {
         this.volumeLevel = Math.max(0, Math.min(1, val));
         localStorage.setItem('portfolio_audio_volume', this.volumeLevel.toFixed(2));
         if (this.masterGain && this.ctx) {
-            this.masterGain.gain.setTargetAtTime(this.volumeLevel, this.ctx.currentTime, 0.05);
+            try {
+                this.masterGain.gain.setTargetAtTime(this.volumeLevel, this.ctx.currentTime, 0.05);
+            } catch (e) {
+                this.masterGain.gain.value = this.volumeLevel;
+            }
         }
+        this.dispatchEvent('volumechange');
     }
 
     getVolume() {
         return this.volumeLevel;
     }
 
-    createSubtleVinylNoise() {
+    startSubtleNoiseBed() {
         if (!this.ctx) return;
         try {
             const bufferSize = this.ctx.sampleRate * 2;
@@ -233,71 +350,105 @@ class AmbientMusicSystem {
             filter.connect(noiseGain);
             noiseGain.connect(this.masterGain);
             whiteNoise.start();
+
+            // Track background noise source node
+            this.activeNodes.push({ osc: whiteNoise, gain: noiseGain, filter: filter });
         } catch (e) {}
     }
 
     playProgression() {
-        if (!this.isPlaying || !this.ctx) return;
+        if (!this.isPlaying) return;
 
         const currentTrack = this.getCurrentTrack();
-        const chords = currentTrack.chords;
-        const chord = chords[this.chordStep % chords.length];
-        const now = this.ctx.currentTime;
         const duration = currentTrack.tempoSec;
 
-        chord.forEach((freq, i) => {
+        if (this.ctx && this.ctx.state !== 'closed') {
+            const chords = currentTrack.chords;
+            const chord = chords[this.chordStep % chords.length];
+            const now = this.ctx.currentTime;
+
+            chord.forEach((freq, i) => {
+                try {
+                    const osc = this.ctx.createOscillator();
+                    const gain = this.ctx.createGain();
+                    const filter = this.ctx.createBiquadFilter();
+
+                    osc.type = i === 0 ? 'sine' : (currentTrack.timbre === 'shimmer_reverb' ? 'sawtooth' : 'triangle');
+                    osc.frequency.setValueAtTime(freq, now);
+                    osc.detune.setValueAtTime((Math.random() - 0.5) * 6, now);
+
+                    filter.type = 'lowpass';
+                    const cutoff = currentTrack.timbre === 'shimmer_reverb' ? 1000 : 650;
+                    filter.frequency.setValueAtTime(cutoff, now);
+                    filter.frequency.exponentialRampToValueAtTime(360, now + duration * 0.85);
+
+                    gain.gain.setValueAtTime(0.001, now);
+                    gain.gain.linearRampToValueAtTime(0.09 / (i * 0.4 + 1), now + 0.6 + i * 0.04);
+                    gain.gain.exponentialRampToValueAtTime(0.001, now + duration);
+
+                    osc.connect(filter);
+                    filter.connect(gain);
+                    gain.connect(this.masterGain);
+
+                    const nodeRef = { osc, gain, filter };
+                    this.activeNodes.push(nodeRef);
+
+                    osc.onended = () => {
+                        try {
+                            osc.disconnect();
+                            filter.disconnect();
+                            gain.disconnect();
+                        } catch (err) {}
+                        this.activeNodes = this.activeNodes.filter(n => n !== nodeRef);
+                    };
+
+                    osc.start(now + i * 0.04);
+                    osc.stop(now + duration + 0.1);
+                } catch (e) {}
+            });
+
+            // Warm Bass Pulse
             try {
-                const osc = this.ctx.createOscillator();
-                const gain = this.ctx.createGain();
-                const filter = this.ctx.createBiquadFilter();
+                const bassOsc = this.ctx.createOscillator();
+                const bassGain = this.ctx.createGain();
+                bassOsc.type = 'sine';
+                bassOsc.frequency.setValueAtTime(chord[0] / 2, now);
+                bassGain.gain.setValueAtTime(0.001, now);
+                bassGain.gain.linearRampToValueAtTime(0.12, now + 0.25);
+                bassGain.gain.exponentialRampToValueAtTime(0.001, now + duration * 0.9);
+                bassOsc.connect(bassGain);
+                bassGain.connect(this.masterGain);
 
-                osc.type = i === 0 ? 'sine' : (currentTrack.timbre === 'shimmer_reverb' ? 'sawtooth' : 'triangle');
-                osc.frequency.setValueAtTime(freq, now);
-                osc.detune.setValueAtTime((Math.random() - 0.5) * 6, now);
+                const bassNodeRef = { osc: bassOsc, gain: bassGain };
+                this.activeNodes.push(bassNodeRef);
 
-                filter.type = 'lowpass';
-                const cutoff = currentTrack.timbre === 'shimmer_reverb' ? 1000 : 650;
-                filter.frequency.setValueAtTime(cutoff, now);
-                filter.frequency.exponentialRampToValueAtTime(360, now + duration * 0.85);
+                bassOsc.onended = () => {
+                    try {
+                        bassOsc.disconnect();
+                        bassGain.disconnect();
+                    } catch (err) {}
+                    this.activeNodes = this.activeNodes.filter(n => n !== bassNodeRef);
+                };
 
-                gain.gain.setValueAtTime(0.001, now);
-                gain.gain.linearRampToValueAtTime(0.09 / (i * 0.4 + 1), now + 0.6 + i * 0.04);
-                gain.gain.exponentialRampToValueAtTime(0.001, now + duration);
-
-                osc.connect(filter);
-                filter.connect(gain);
-                gain.connect(this.masterGain);
-
-                osc.start(now + i * 0.04);
-                osc.stop(now + duration + 0.1);
+                bassOsc.start(now);
+                bassOsc.stop(now + duration);
             } catch (e) {}
-        });
-
-        // Warm Bass Pulse
-        try {
-            const bassOsc = this.ctx.createOscillator();
-            const bassGain = this.ctx.createGain();
-            bassOsc.type = 'sine';
-            bassOsc.frequency.setValueAtTime(chord[0] / 2, now);
-            bassGain.gain.setValueAtTime(0.001, now);
-            bassGain.gain.linearRampToValueAtTime(0.12, now + 0.25);
-            bassGain.gain.exponentialRampToValueAtTime(0.001, now + duration * 0.9);
-            bassOsc.connect(bassGain);
-            bassGain.connect(this.masterGain);
-            bassOsc.start(now);
-            bassOsc.stop(now + duration);
-        } catch (e) {}
+        }
 
         this.chordStep++;
+        this.lastTickTime = performance.now();
 
-        // Crossfade every 8 chords (~32 seconds)
-        if (this.chordStep % 8 === 0) {
+        // Advance track when 8 chords have completed
+        if (this.chordStep >= 8) {
+            this.dispatchEvent('ended');
             this.crossfadeToNextTrack();
+            return;
         }
 
         this.trackTimer = setTimeout(() => {
+            this.trackElapsed += duration;
             this.playProgression();
-        }, duration * 1000 * 0.95);
+        }, duration * 1000 * 0.96);
     }
 
     nextTrack() {
@@ -306,15 +457,25 @@ class AmbientMusicSystem {
 
     prevTrack() {
         this.playlistIndex = (this.playlistIndex - 1 + this.playlist.length) % this.playlist.length;
-        this.chordStep = 0;
+        this.resetTrackState();
         const track = this.getCurrentTrack();
+        this.updateCurrentTrackDuration();
         if (window.onAmbientTrackChange) {
             window.onAmbientTrackChange(track);
         }
         if (this.isPlaying) {
             if (this.trackTimer) clearTimeout(this.trackTimer);
+            this.lastTickTime = performance.now();
             this.playProgression();
         }
+        this.dispatchEvent('timeupdate');
+    }
+
+    resetTrackState() {
+        this.chordStep = 0;
+        this.trackElapsed = 0.0;
+        this.lastTickTime = this.isPlaying ? performance.now() : null;
+        this.isEnded = false;
     }
 
     crossfadeToNextTrack() {
@@ -322,27 +483,34 @@ class AmbientMusicSystem {
         if (this.playlistIndex === 0) {
             this.shufflePlaylist();
         }
-        this.chordStep = 0;
+        this.resetTrackState();
+        this.updateCurrentTrackDuration();
         
         const track = this.getCurrentTrack();
         if (window.onAmbientTrackChange) {
             window.onAmbientTrackChange(track);
         }
+        if (this.isPlaying) {
+            if (this.trackTimer) clearTimeout(this.trackTimer);
+            this.lastTickTime = performance.now();
+            this.playProgression();
+        }
+        this.dispatchEvent('timeupdate');
     }
 
     play() {
         try {
             if (!this.ctx) this.init();
-            if (this.ctx && this.ctx.state === 'suspended') {
-                this.ctx.resume().catch(() => {});
-            }
             this.isPlaying = true;
+            this.isEnded = false;
+            this.lastTickTime = performance.now();
             localStorage.setItem('portfolio_sound_enabled', 'true');
-            this.playProgression();
+            this.resumeAudio();
             const track = this.getCurrentTrack();
             if (window.onAmbientTrackChange) {
                 window.onAmbientTrackChange(track);
             }
+            this.dispatchEvent('play');
             return true;
         } catch (err) {
             console.warn('Audio playback error:', err);
@@ -352,9 +520,20 @@ class AmbientMusicSystem {
     }
 
     pause() {
+        if (this.isPlaying && this.lastTickTime !== null) {
+            const now = performance.now();
+            this.trackElapsed = Math.min(this.trackDuration, this.trackElapsed + (now - this.lastTickTime) / 1000);
+        }
+        this.lastTickTime = null;
         this.isPlaying = false;
+        if (this.trackTimer) {
+            clearTimeout(this.trackTimer);
+            this.trackTimer = null;
+        }
         localStorage.setItem('portfolio_sound_enabled', 'false');
-        if (this.trackTimer) clearTimeout(this.trackTimer);
+        this.suspendAudio();
+        this.dispatchEvent('pause');
+        this.dispatchEvent('timeupdate');
         return false;
     }
 
