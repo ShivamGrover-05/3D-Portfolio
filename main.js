@@ -59,14 +59,15 @@ document.addEventListener('DOMContentLoaded', () => {
 
     if (typeof Lenis !== 'undefined') {
         lenis = new Lenis({
-            duration: prefersReducedMotion ? 0 : 1.1,
+            duration: prefersReducedMotion ? 0 : 1.2,
             easing: (t) => Math.min(1, 1.001 - Math.pow(2, -10 * t)),
             orientation: 'vertical',
             gestureOrientation: 'vertical',
             smoothWheel: true,
             wheelMultiplier: 1.0,
-            touchMultiplier: 1.0,
-            syncTouch: false, // Allows native, hardware-accelerated touch scrolling with 0ms input latency on Android
+            touchMultiplier: 1.25,
+            syncTouch: true,
+            syncTouchLerp: 0.085,
             autoResize: true
         });
 

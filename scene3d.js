@@ -7,7 +7,7 @@ class CameraDirector {
         this.states = {
             HOME: {
                 desktop: { x: 0, y: 0.15, z: 6.2, targetX: 0, targetY: 0.15, targetZ: 0, fov: 45 },
-                mobile: { x: 0, y: 0.2, z: 7.0, targetX: 0, targetY: 0.2, targetZ: 0, fov: 46 }
+                mobile: { x: 0, y: -0.85, z: 7.2, targetX: 0, targetY: -0.75, targetZ: 0, fov: 46 }
             },
             ABOUT: {
                 desktop: { x: -2.2, y: 0.4, z: 6.0, targetX: 0.4, targetY: 0.2, targetZ: 0, fov: 45 },
@@ -343,7 +343,7 @@ class StudioScene {
         const isMobile = this.deviceProfile.isMobile;
         this.deskTransform = {
             baseRotation: { x: 0.15, y: 0, z: 0 },
-            basePosition: { x: isMobile ? 0 : 1.15, y: isMobile ? -0.2 : 0.05, z: 0 },
+            basePosition: { x: isMobile ? 0 : 1.15, y: 0.05, z: 0 },
 
             scrollRotation: { x: 0, y: 0, z: 0 },
             scrollPosition: { x: 0, y: 0, z: 0 },
@@ -354,7 +354,7 @@ class StudioScene {
             dragRotation: { x: 0, y: 0 },
 
             currentRotation: { x: 0.15, y: 0, z: 0 },
-            currentPosition: { x: isMobile ? 0 : 1.15, y: isMobile ? -0.2 : 0.05, z: 0 },
+            currentPosition: { x: isMobile ? 0 : 1.15, y: 0.05, z: 0 },
 
             limits: {
                 minRotY: -1.4,
@@ -389,7 +389,7 @@ class StudioScene {
                 contact: { x: 0, y: 0.2, z: 5.6, targetX: 0, targetY: 0.2, targetZ: 0.2 }
             },
             mobile: {
-                home: { x: 0, y: 0.2, z: 7.0, targetX: 0, targetY: 0.2, targetZ: 0 },
+                home: { x: 0, y: -0.85, z: 7.2, targetX: 0, targetY: -0.75, targetZ: 0 },
                 about: { x: -0.8, y: 0.2, z: 5.8, targetX: 0, targetY: 0.1, targetZ: 0 },
                 projects: { x: 0, y: 0.2, z: 5.5, targetX: 0, targetY: 0.1, targetZ: 0 },
                 skills: { x: 1.0, y: 0.5, z: 5.6, targetX: 0, targetY: 0.2, targetZ: 0 },
@@ -634,18 +634,28 @@ class StudioScene {
 
         // Update responsive base position of sphere
         this.deskTransform.basePosition.x = isMobile ? 0 : 1.15;
-        this.deskTransform.basePosition.y = isMobile ? -0.2 : 0.05;
+        this.deskTransform.basePosition.y = 0.05;
+
+        if (this.sphereGroup) {
+            const sphereScale = isMobile ? 0.82 : 1.0;
+            this.sphereGroup.scale.set(sphereScale, sphereScale, sphereScale);
+        }
 
         if (isMobile) {
-            if (aspect < 0.52) {
-                this.camera.position.set(p.x, p.y + 0.15, p.z + 0.5);
-                this.camera.fov = 48;
-            } else if (aspect < 0.65) {
+            if (this.currentSection === 'home') {
+                if (aspect < 0.52) {
+                    this.camera.position.set(p.x, p.y - 0.1, p.z + 0.3);
+                    this.camera.fov = 47;
+                } else if (aspect < 0.65) {
+                    this.camera.position.set(p.x, p.y, p.z);
+                    this.camera.fov = 46;
+                } else {
+                    this.camera.position.set(p.x, p.y + 0.1, p.z - 0.3);
+                    this.camera.fov = 45;
+                }
+            } else {
                 this.camera.position.set(p.x, p.y, p.z);
                 this.camera.fov = 46;
-            } else {
-                this.camera.position.set(p.x, p.y - 0.1, p.z - 0.3);
-                this.camera.fov = 44;
             }
         } else {
             this.camera.position.set(p.x, p.y, p.z);
@@ -685,6 +695,9 @@ class StudioScene {
 
         // Initial responsive position
         const isMobile = this.deviceProfile.isMobile;
+        const sphereScale = isMobile ? 0.82 : 1.0;
+        this.sphereGroup.scale.set(sphereScale, sphereScale, sphereScale);
+
         this.sphereGroup.position.set(
             this.deskTransform.basePosition.x,
             this.deskTransform.basePosition.y,
