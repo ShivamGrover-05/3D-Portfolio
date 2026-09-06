@@ -73,13 +73,33 @@ document.addEventListener('DOMContentLoaded', () => {
 
         window.lenis = lenis;
 
-        // Synchronize with GSAP ScrollTrigger & 3D Studio Scene
+        // Synchronize with GSAP ScrollTrigger & 3D Studio Scene & UI Scroll States
         lenis.on('scroll', (e) => {
             if (typeof ScrollTrigger !== 'undefined') ScrollTrigger.update();
             if (window.studioScene && typeof window.studioScene.onScroll === 'function') {
                 window.studioScene.onScroll(e);
             }
+            const hintPill = document.getElementById('drag-hint-pill');
+            if (hintPill) {
+                const currentScroll = (typeof e.scroll === 'number') ? e.scroll : (window.scrollY || 0);
+                if (currentScroll > 40) {
+                    hintPill.classList.add('fade-out');
+                } else {
+                    hintPill.classList.remove('fade-out');
+                }
+            }
         });
+
+        window.addEventListener('scroll', () => {
+            const hintPill = document.getElementById('drag-hint-pill');
+            if (hintPill) {
+                if (window.scrollY > 40) {
+                    hintPill.classList.add('fade-out');
+                } else {
+                    hintPill.classList.remove('fade-out');
+                }
+            }
+        }, { passive: true });
 
         // Coordinate unified animation loop via GSAP ticker
         if (typeof gsap !== 'undefined') {
@@ -819,6 +839,254 @@ document.addEventListener('DOMContentLoaded', () => {
             if (submitBtn) {
                 submitBtn.disabled = false;
                 if (btnText) btnText.textContent = 'SEND MESSAGE →';
+            }
+        });
+    }
+
+    // 10.1 Interactive Glassmorphic Contact Popup Modal & Confetti Celebration
+    const contactModal = document.getElementById('contact-modal');
+    const contactModalCloseBtn = document.getElementById('contact-modal-close-btn');
+    const contactModalBackdrop = document.getElementById('contact-modal-backdrop');
+    const popupContactForm = document.getElementById('popup-contact-form');
+    const popupSubmitBtn = document.getElementById('popup-submit-btn');
+    const popupBtnText = document.getElementById('popup-btn-text');
+    const popupErrorBox = document.getElementById('popup-form-error');
+    const popupErrorText = document.getElementById('popup-error-text');
+
+    const celebrationModal = document.getElementById('contact-celebration-modal');
+    const celebrationCloseBtn = document.getElementById('celebration-close-btn');
+    const celebrationDoneBtn = document.getElementById('celebration-done-btn');
+    const confettiCanvas = document.getElementById('celebration-confetti-canvas');
+
+    const openContactModal = () => {
+        if (contactModal) {
+            contactModal.classList.add('active');
+            contactModal.setAttribute('aria-hidden', 'false');
+            if (window.lucide) lucide.createIcons();
+            triggerHaptic('action');
+            setTimeout(() => {
+                const firstInput = document.getElementById('popup-form-name');
+                if (firstInput) firstInput.focus();
+            }, 180);
+        }
+    };
+
+    const closeContactModal = () => {
+        if (contactModal) {
+            contactModal.classList.remove('active');
+            contactModal.setAttribute('aria-hidden', 'true');
+        }
+    };
+
+    // Wire up all "LET'S CONNECT" buttons
+    document.querySelectorAll('.open-connect-modal-trigger, a[href="#contact-modal"]').forEach(trigger => {
+        trigger.addEventListener('click', (e) => {
+            e.preventDefault();
+            openContactModal();
+        });
+    });
+
+    const navbarConnectBtn = document.getElementById('navbar-connect-btn');
+    if (navbarConnectBtn) {
+        navbarConnectBtn.addEventListener('click', (e) => {
+            e.preventDefault();
+            openContactModal();
+        });
+    }
+
+    if (contactModalCloseBtn) contactModalCloseBtn.addEventListener('click', closeContactModal);
+    if (contactModalBackdrop) contactModalBackdrop.addEventListener('click', closeContactModal);
+
+    // Confetti Animation Engine for Celebration Modal
+    let confettiAnimationId = null;
+    function runCelebrationConfetti() {
+        if (!confettiCanvas) return;
+        const ctx = confettiCanvas.getContext('2d');
+        if (!ctx) return;
+
+        confettiCanvas.width = window.innerWidth;
+        confettiCanvas.height = window.innerHeight;
+
+        const colors = ['#00f3ff', '#6c5ce7', '#00ff9d', '#ff7675', '#fdcb6e', '#e056fd', '#ffffff'];
+        const particles = [];
+        const particleCount = 140;
+
+        for (let i = 0; i < particleCount; i++) {
+            particles.push({
+                x: window.innerWidth / 2 + (Math.random() - 0.5) * 300,
+                y: window.innerHeight / 2 - 80 + (Math.random() - 0.5) * 150,
+                vx: (Math.random() - 0.5) * 22,
+                vy: (Math.random() - 1.2) * 18,
+                size: Math.random() * 8 + 4,
+                color: colors[Math.floor(Math.random() * colors.length)],
+                rotation: Math.random() * 360,
+                rotationSpeed: (Math.random() - 0.5) * 14,
+                alpha: 1,
+                decay: Math.random() * 0.007 + 0.004,
+                shape: Math.random() > 0.35 ? 'rect' : 'circle'
+            });
+        }
+
+        if (confettiAnimationId) cancelAnimationFrame(confettiAnimationId);
+
+        function renderConfetti() {
+            ctx.clearRect(0, 0, confettiCanvas.width, confettiCanvas.height);
+            let activeCount = 0;
+
+            particles.forEach(p => {
+                if (p.alpha <= 0) return;
+                activeCount++;
+
+                p.x += p.vx;
+                p.y += p.vy;
+                p.vy += 0.32; // Gravity
+                p.vx *= 0.985; // Drag
+                p.rotation += p.rotationSpeed;
+                p.alpha -= p.decay;
+
+                ctx.save();
+                ctx.globalAlpha = Math.max(0, p.alpha);
+                ctx.translate(p.x, p.y);
+                ctx.rotate((p.rotation * Math.PI) / 180);
+                ctx.fillStyle = p.color;
+
+                if (p.shape === 'rect') {
+                    ctx.fillRect(-p.size / 2, -p.size / 2, p.size, p.size * 1.5);
+                } else {
+                    ctx.beginPath();
+                    ctx.arc(0, 0, p.size / 2, 0, Math.PI * 2);
+                    ctx.fill();
+                }
+
+                ctx.restore();
+            });
+
+            if (activeCount > 0) {
+                confettiAnimationId = requestAnimationFrame(renderConfetti);
+            }
+        }
+
+        renderConfetti();
+    }
+
+    const openCelebrationModal = () => {
+        if (celebrationModal) {
+            celebrationModal.classList.add('active');
+            celebrationModal.setAttribute('aria-hidden', 'false');
+            if (window.lucide) lucide.createIcons();
+            runCelebrationConfetti();
+            triggerHaptic('reset');
+        }
+    };
+
+    const closeCelebrationModal = () => {
+        if (celebrationModal) {
+            celebrationModal.classList.remove('active');
+            celebrationModal.setAttribute('aria-hidden', 'true');
+        }
+        if (confettiAnimationId) {
+            cancelAnimationFrame(confettiAnimationId);
+            confettiAnimationId = null;
+        }
+    };
+
+    if (celebrationCloseBtn) celebrationCloseBtn.addEventListener('click', closeCelebrationModal);
+    if (celebrationDoneBtn) celebrationDoneBtn.addEventListener('click', closeCelebrationModal);
+
+    // Popup Form Submit Handler
+    if (popupContactForm) {
+        popupContactForm.addEventListener('submit', async (e) => {
+            e.preventDefault();
+
+            const nameInput = document.getElementById('popup-form-name');
+            const emailInput = document.getElementById('popup-form-email');
+            const subjectInput = document.getElementById('popup-form-subject');
+            const phoneInput = document.getElementById('popup-form-phone');
+            const messageInput = document.getElementById('popup-form-message');
+            const websiteInput = document.getElementById('popup-form-website');
+
+            const name = nameInput ? nameInput.value.trim() : '';
+            const email = emailInput ? emailInput.value.trim() : '';
+            const subject = subjectInput ? subjectInput.value.trim() : '';
+            const phone = phoneInput ? phoneInput.value.trim() : '';
+            const message = messageInput ? messageInput.value.trim() : '';
+            const website = websiteInput ? websiteInput.value : '';
+
+            const showPopupError = (msg) => {
+                if (popupErrorBox && popupErrorText) {
+                    popupErrorText.textContent = msg;
+                    popupErrorBox.style.display = 'flex';
+                }
+            };
+
+            if (!name || name.length < 2) {
+                showPopupError('Please enter your name (at least 2 characters).');
+                if (nameInput) nameInput.focus();
+                return;
+            }
+
+            const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+            if (!email || !emailRegex.test(email)) {
+                showPopupError('Please enter a valid email address.');
+                if (emailInput) emailInput.focus();
+                return;
+            }
+
+            if (!message || message.length < 5) {
+                showPopupError('Please provide a message or project scope (at least 5 characters).');
+                if (messageInput) messageInput.focus();
+                return;
+            }
+
+            if (popupErrorBox) popupErrorBox.style.display = 'none';
+
+            // Loading state
+            if (popupSubmitBtn) {
+                popupSubmitBtn.disabled = true;
+                if (popupBtnText) popupBtnText.textContent = 'TRANSMITTING...';
+            }
+            triggerHaptic('action');
+
+            try {
+                const response = await fetch('/api/contact', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        name,
+                        email,
+                        subject: subject || 'Portfolio Let\'s Connect Inquiry',
+                        phone,
+                        message,
+                        website
+                    })
+                });
+
+                const result = await response.json().catch(() => ({}));
+
+                if (response.ok && result.success) {
+                    popupContactForm.reset();
+                    if (popupSubmitBtn) {
+                        popupSubmitBtn.disabled = false;
+                        if (popupBtnText) popupBtnText.textContent = 'TRANSMIT MESSAGE';
+                    }
+                    // Close contact modal and open celebratory modal with confetti
+                    closeContactModal();
+                    openCelebrationModal();
+                } else {
+                    const err = result.message || "Message couldn't be transmitted. Please try again.";
+                    showPopupError(err);
+                    if (popupSubmitBtn) {
+                        popupSubmitBtn.disabled = false;
+                        if (popupBtnText) popupBtnText.textContent = 'TRY AGAIN →';
+                    }
+                }
+            } catch (err) {
+                console.error('Contact transmission failed:', err);
+                showPopupError("Transmission failed. Please try again or email codewithshivamdev@gmail.com directly.");
+                if (popupSubmitBtn) {
+                    popupSubmitBtn.disabled = false;
+                    if (popupBtnText) popupBtnText.textContent = 'TRY AGAIN →';
+                }
             }
         });
     }

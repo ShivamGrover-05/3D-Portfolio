@@ -5,7 +5,8 @@
   "main": "api/contact.js",
   "type": "module",
   "scripts": {
-    "dev": "vercel dev"
+    "dev": "node dev-server.mjs",
+    "start": "node dev-server.mjs"
   },
   "dependencies": {
     "nodemailer": "^6.9.16"

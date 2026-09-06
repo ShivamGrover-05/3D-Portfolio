@@ -89,7 +89,7 @@
             <button id="toggle-lamp-btn" class="social-icon" title="Toggle Studio Desk Lamp">
                 <i data-lucide="sun"></i>
             </button>
-            <a href="#contact" class="btn-primary">
+            <a href="#contact-modal" class="btn-primary open-connect-modal-trigger" id="navbar-connect-btn">
                 LET'S CONNECT <i data-lucide="arrow-right" style="width: 16px; height: 16px;"></i>
             </a>
             <!-- Mobile Menu Toggle Button -->
@@ -393,7 +393,7 @@
                             <div class="card-label"><i data-lucide="mail"></i> DIRECT EMAIL</div>
                             <p style="font-size: 0.85rem; color: var(--text-muted); margin-bottom: 14px;">Available for high-impact full-stack development, 3D interactive commissions, and RevOps workflow contracts.</p>
                             <div class="email-copy-bar">
-                                <code id="os-email-code">codewithshivamdev@gmail.com</code>
+                                <a href="mailto:codewithshivamdev@gmail.com" id="os-email-code" class="os-email-link" title="Send Direct Email">codewithshivamdev@gmail.com</a>
                                 <button class="os-copy-btn" id="os-copy-email-btn" title="Copy Email to Clipboard"><i data-lucide="copy"></i> <span>COPY</span></button>
                             </div>
                         </div>
@@ -403,7 +403,6 @@
                             <div class="os-social-links">
                                 <a href="https://github.com/ShivamGrover-05" target="_blank" rel="noopener" class="os-link-btn"><i data-lucide="github"></i> GitHub: @ShivamGrover-05</a>
                                 <a href="https://linkedin.com/in/shivamgrover-dev" target="_blank" rel="noopener" class="os-link-btn"><i data-lucide="linkedin"></i> LinkedIn: /in/shivamgrover-dev</a>
-                                <a href="https://cal.com" target="_blank" rel="noopener" class="os-link-btn primary"><i data-lucide="calendar"></i> Schedule 15-Min Intro Call</a>
                             </div>
                         </div>
                     </div>
@@ -854,8 +853,288 @@
                 </div>
             </div>
         </section>
+    <!-- ===================================================
+         NEXT-LEVEL CYBERNETIC AI ASSISTANT (NOVA // AI)
+         =================================================== -->
+    
+    <!-- Floating AI Orb Launcher Widget -->
+    <div id="chatbot-launcher-container" class="chatbot-launcher-container">
+        <!-- Floating Interactive Invite Pill -->
+        <div id="chatbot-invite-pill" class="chatbot-invite-pill">
+            <span class="invite-dot"></span>
+            <span>Ask ULTRON anything about Shivam!</span>
+            <button class="invite-close-btn" id="chatbot-invite-close" title="Dismiss" aria-label="Dismiss">&times;</button>
+        </div>
 
-    </main>
+        <!-- Floating AI Orb Button -->
+        <button id="chatbot-launcher" class="chatbot-launcher-btn" title="Open AI Assistant (ULTRON)" aria-label="Open AI Assistant">
+            <div class="launcher-aura-ring"></div>
+            <div class="launcher-orb-core">
+                <img src="assets/ultron-avatar.jpg" alt="ULTRON AI" class="launcher-avatar-img">
+                <i data-lucide="x" class="launcher-icon-close"></i>
+            </div>
+            <span class="launcher-status-dot" title="SYS // ONLINE"></span>
+        </button>
+    </div>
+
+    <!-- Holographic Glassmorphic HUD Chat Window -->
+    <div id="chatbot-window" class="chatbot-window" aria-hidden="true" role="dialog" aria-label="ULTRON AI Assistant" data-lenis-prevent>
+        <!-- Window Ambient Glow & HUD Brackets -->
+        <div class="hud-corner top-left"></div>
+        <div class="hud-corner top-right"></div>
+        <div class="hud-corner bottom-left"></div>
+        <div class="hud-corner bottom-right"></div>
+        
+        <!-- Header -->
+        <header class="chatbot-header">
+            <div class="chatbot-header-identity">
+                <div class="chatbot-avatar-status">
+                    <div class="chatbot-avatar-orb">
+                        <img src="assets/ultron-avatar.jpg" alt="ULTRON Core" class="chatbot-avatar-img">
+                    </div>
+                    <span class="chatbot-live-pulse"></span>
+                </div>
+                <div class="chatbot-meta">
+                    <div class="chatbot-title-row">
+                        <span class="chatbot-name">ULTRON</span>
+                        <span class="chatbot-badge">AI 2.5</span>
+                    </div>
+                    <div class="chatbot-status-row">
+                        <span class="status-indicator-dot"></span>
+                        <span class="chatbot-status-text">SYS // ONLINE</span>
+                        <span class="chatbot-sep">•</span>
+                        <span class="chatbot-model-text">NEURAL ENGINE</span>
+                    </div>
+                </div>
+            </div>
+
+            <div class="chatbot-header-actions">
+                <button id="chatbot-mute-btn" class="chat-tool-btn" title="Mute/Unmute Audio Feedback" aria-label="Toggle Sound">
+                    <i data-lucide="volume-2" style="width: 15px; height: 15px;"></i>
+                </button>
+                <button id="chatbot-clear-btn" class="chat-tool-btn" title="Reset / Clear History" aria-label="Clear Chat History">
+                    <i data-lucide="rotate-ccw" style="width: 14px; height: 14px;"></i>
+                </button>
+                <button id="chatbot-close-btn" class="chat-tool-btn close" title="Close ULTRON (Esc)" aria-label="Close Chat">
+                    <i data-lucide="x" style="width: 16px; height: 16px;"></i>
+                </button>
+            </div>
+        </header>
+
+        <!-- Message Stream Area -->
+        <div class="chatbot-body" data-lenis-prevent>
+            <div id="chatbot-messages" class="chatbot-messages-list" data-lenis-prevent>
+                <!-- Welcome greeting -->
+                <div class="chat-msg-row assistant">
+                    <div class="chat-avatar-wrap">
+                        <div class="chat-avatar-bot">
+                            <img src="assets/ultron-avatar.jpg" alt="ULTRON" class="chat-avatar-mini-img">
+                        </div>
+                    </div>
+                    <div class="chat-bubble chat-bubble-bot" data-raw-text="Greetings! I am ULTRON, Shivam Grover's cybernetic AI assistant. Ask me anything about his projects, 3D WebGL development, workflow automations, or how to collaborate with him!">
+                        <div class="chat-bubble-header">
+                            <span class="chat-bot-label">ULTRON // CORE</span>
+                        </div>
+                        <div class="chat-msg-content">
+                            Greetings! I am <strong>ULTRON</strong>, Shivam Grover's cybernetic AI assistant.
+                            <br><br>
+                            I have direct access to Shivam's portfolio data, tech stack, and experience. Pick a prompt below or type any question!
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Quick Action Suggestion Chips -->
+            <div id="chatbot-suggestions" class="chatbot-suggestions">
+                <div class="suggestions-label">
+                    <i data-lucide="sparkles" style="width: 11px; height: 11px;"></i> SUGGESTED INQUIRIES
+                </div>
+                <div class="chips-scroll">
+                    <button class="chat-suggestion-chip" data-query="What are Shivam's top projects?">
+                        <span>🚀</span> Top Projects
+                    </button>
+                    <button class="chat-suggestion-chip" data-query="What is Shivam's tech stack & core skills?">
+                        <span>⚡</span> Tech Stack
+                    </button>
+                    <button class="chat-suggestion-chip" data-query="Tell me about Shivam's workflow automation & RevOps work">
+                        <span>🤖</span> Automations
+                    </button>
+                    <button class="chat-suggestion-chip" data-query="What makes Aevonix 3D controller special?">
+                        <span>🎮</span> Aevonix 3D
+                    </button>
+                    <button class="chat-suggestion-chip" data-query="How can I contact or hire Shivam for a project?">
+                        <span>📬</span> Hire / Contact
+                    </button>
+                </div>
+            </div>
+
+            <!-- Animated Typing Indicator -->
+            <div id="chatbot-typing-indicator" class="chatbot-typing" style="display: none;">
+                <div class="typing-avatar">
+                    <img src="assets/ultron-avatar.jpg" alt="ULTRON" class="chat-avatar-mini-img">
+                </div>
+                <div class="typing-bubble">
+                    <span class="typing-label">ULTRON is synthesizing</span>
+                    <span class="typing-dot dot-1"></span>
+                    <span class="typing-dot dot-2"></span>
+                    <span class="typing-dot dot-3"></span>
+                </div>
+            </div>
+        </div>
+
+        <!-- Chat Input Row -->
+        <footer class="chatbot-footer">
+            <div class="chat-input-wrapper">
+                <textarea 
+                    id="chatbot-input" 
+                    class="chatbot-textarea" 
+                    placeholder="Ask ULTRON anything about Shivam..." 
+                    rows="1" 
+                    aria-label="Ask ULTRON a question"
+                ></textarea>
+                <div class="chat-input-actions">
+                    <button id="chatbot-mic-btn" class="chat-input-btn mic" title="Voice Input" aria-label="Dictate message with voice">
+                        <i data-lucide="mic" style="width: 15px; height: 15px;"></i>
+                    </button>
+                    <button id="chatbot-send-btn" class="chat-input-btn send" title="Send Message (Enter)" aria-label="Send Message">
+                        <i data-lucide="arrow-up" style="width: 16px; height: 16px;"></i>
+                    </button>
+                </div>
+            </div>
+            <div class="chatbot-footer-hint">
+                <span>Press <kbd>Enter</kbd> to send, <kbd>Shift+Enter</kbd> for newline</span>
+            </div>
+        </footer>
+    </div>
+
+    <!-- Animated Glassmorphism Contact Popup Modal -->
+    <div id="contact-modal" class="contact-modal-overlay" aria-hidden="true" role="dialog" aria-modal="true" aria-labelledby="contact-modal-title">
+        <div class="contact-modal-backdrop" id="contact-modal-backdrop"></div>
+        <div class="contact-modal-dialog">
+            <!-- Cyberpunk HUD Accents -->
+            <div class="hud-corner top-left"></div>
+            <div class="hud-corner top-right"></div>
+            <div class="hud-corner bottom-left"></div>
+            <div class="hud-corner bottom-right"></div>
+
+            <button class="modal-close-btn" id="contact-modal-close-btn" aria-label="Close Contact Dialog" title="Close (Esc)">
+                <i data-lucide="x" style="width: 18px; height: 18px;"></i>
+            </button>
+
+            <!-- Modal Header -->
+            <div class="contact-modal-header">
+                <div class="modal-status-badge">
+                    <span class="status-indicator-dot"></span>
+                    <span>DIRECT COLLABORATION // TRANSMISSION</span>
+                </div>
+                <h2 id="contact-modal-title" class="contact-modal-title">LET'S CONNECT</h2>
+                <p class="contact-modal-desc">
+                    Ready to create something unforgettable? Fill out the brief below and your message will be dispatched directly to Shivam's workstation.
+                </p>
+            </div>
+
+            <!-- Modal Form -->
+            <form id="popup-contact-form" class="contact-modal-form" novalidate>
+                <!-- Honeypot Anti-Spam Field -->
+                <div style="display: none !important; opacity: 0; position: absolute; left: -9999px;">
+                    <input type="text" id="popup-form-website" name="website" tabindex="-1" autocomplete="off">
+                </div>
+
+                <div class="modal-form-grid">
+                    <div class="modal-form-group">
+                        <label for="popup-form-name">YOUR NAME <span class="req-star">*</span></label>
+                        <div class="input-with-icon">
+                            <i data-lucide="user" class="input-icon"></i>
+                            <input type="text" id="popup-form-name" required placeholder="Alex Morgan" autocomplete="name">
+                        </div>
+                    </div>
+                    <div class="modal-form-group">
+                        <label for="popup-form-email">EMAIL ADDRESS <span class="req-star">*</span></label>
+                        <div class="input-with-icon">
+                            <i data-lucide="mail" class="input-icon"></i>
+                            <input type="email" id="popup-form-email" required placeholder="alex@company.com" autocomplete="email">
+                        </div>
+                    </div>
+                </div>
+
+                <div class="modal-form-grid">
+                    <div class="modal-form-group">
+                        <label for="popup-form-subject">INQUIRY TYPE / SUBJECT</label>
+                        <div class="input-with-icon">
+                            <i data-lucide="briefcase" class="input-icon"></i>
+                            <input type="text" id="popup-form-subject" placeholder="3D Web Experience / Full-Stack / RevOps">
+                        </div>
+                    </div>
+                    <div class="modal-form-group">
+                        <label for="popup-form-phone">PHONE NUMBER (OPTIONAL)</label>
+                        <div class="input-with-icon">
+                            <i data-lucide="phone" class="input-icon"></i>
+                            <input type="tel" id="popup-form-phone" placeholder="+1 (555) 000-0000" autocomplete="tel">
+                        </div>
+                    </div>
+                </div>
+
+                <div class="modal-form-group">
+                    <label for="popup-form-message">MESSAGE OR PROJECT SCOPE <span class="req-star">*</span></label>
+                    <textarea id="popup-form-message" rows="4" required placeholder="Tell me about your goals, project timeline, vision, or any questions..."></textarea>
+                </div>
+
+                <!-- Error feedback inside modal -->
+                <div id="popup-form-error" class="modal-form-error" style="display: none;">
+                    <i data-lucide="alert-circle" style="width: 16px; height: 16px;"></i>
+                    <span id="popup-error-text">Please fill in all required fields.</span>
+                </div>
+
+                <div class="modal-form-actions">
+                    <button type="submit" id="popup-submit-btn" class="modal-submit-btn">
+                        <span id="popup-btn-text">TRANSMIT MESSAGE</span>
+                        <i data-lucide="send" style="width: 16px; height: 16px;"></i>
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Celebration / Congratulation Modal -->
+    <div id="contact-celebration-modal" class="celebration-modal-overlay" aria-hidden="true" role="dialog" aria-modal="true">
+        <canvas id="celebration-confetti-canvas" class="celebration-confetti-canvas"></canvas>
+        <div class="celebration-card">
+            <button class="celebration-close-btn" id="celebration-close-btn" aria-label="Close Celebration" title="Close (Esc)">
+                <i data-lucide="x" style="width: 18px; height: 18px;"></i>
+            </button>
+
+            <!-- Holographic Ultron Cybernetic Badge -->
+            <div class="celebration-avatar-wrap">
+                <div class="celebration-avatar-glow"></div>
+                <img src="assets/ultron-avatar.jpg" alt="ULTRON Cybernetic Core" class="celebration-avatar-img">
+                <div class="celebration-avatar-ring"></div>
+            </div>
+
+            <div class="celebration-badge-pill">
+                <span class="pulse-sparkle">✨</span> TRANSMISSION LOGGED
+            </div>
+
+            <h3 class="celebration-title">CONGRATULATIONS! 🎉</h3>
+            <p class="celebration-subtitle">
+                Your message has arrived safely in Shivam's core terminal.
+            </p>
+            
+            <div class="celebration-notice-box">
+                <div class="notice-item">
+                    <i data-lucide="check-circle-2" style="color: var(--accent-cyan); width: 16px; height: 16px;"></i>
+                    <span>A confirmation & thank-you email has been dispatched to your inbox.</span>
+                </div>
+                <div class="notice-item">
+                    <i data-lucide="clock" style="color: #00ff9d; width: 16px; height: 16px;"></i>
+                    <span>Expected response time: within <strong>24 hours</strong>.</span>
+                </div>
+            </div>
+
+            <button type="button" id="celebration-done-btn" class="celebration-btn">
+                RETURN TO EXPLORATION &rarr;
+            </button>
+        </div>
+    </div>
 
     <!-- Dynamic Liquid Glass Music Player Capsule -->
     <aside id="audio-capsule" class="audio-capsule paused" aria-label="Ambient Music Player">
@@ -945,6 +1224,7 @@
     <script src="audio.js"></script>
     <script src="scene3d.js"></script>
     <script src="virtualOS.js"></script>
+    <script src="chatbot.js"></script>
     <script src="main.js"></script>
     <script>
         lucide.createIcons();

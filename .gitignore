@@ -1,11 +1,18 @@
-# .gitignore
-.vercel
+# Environment & Secrets
 .env
+.env*
 .env*.local
+*.env
+
+# Build & Deployment
+.vercel/
 node_modules/
+dist/
+build/
+
+# Local Dev & Verification Scripts
+verify-smtp.mjs
+*.log
+*.tmp
 .DS_Store
 Thumbs.db
-*.log
-
-.vercel
-.env*
