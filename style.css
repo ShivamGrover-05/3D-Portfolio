@@ -604,7 +604,7 @@ body {
     padding: 16px;
     backdrop-filter: var(--glass-blur);
     box-shadow: 0 20px 40px rgba(0, 0, 0, 0.45);
-    z-index: 10;
+    z-index: 15;
     pointer-events: auto;
     isolation: isolate;
 }
@@ -699,8 +699,8 @@ body {
 
 /* Positioned cleanly away from the Featured Builds panel */
 .holo-tag-design {
-    top: 42%;
-    left: 56%;
+    top: 40%;
+    left: 51%;
     animation-delay: 1.2s;
 }
 
@@ -1607,6 +1607,19 @@ body {
 }
 
 /* Responsive Media Queries */
+@media (max-width: 1366px) and (min-width: 1025px) {
+    .hero-projects-preview {
+        top: 96px;
+        right: 24px;
+        width: 290px;
+        padding: 12px;
+    }
+    .holo-tag-design {
+        top: 38%;
+        left: 48%;
+    }
+}
+
 @media (max-width: 1024px) {
     .navbar { padding: 16px 20px; }
     .nav-links { display: none; }
@@ -1623,6 +1636,9 @@ body {
 }
 
 @media (max-width: 768px) {
+    :root {
+        --glass-blur: blur(6px);
+    }
     .navbar { padding: 12px 16px; }
     .brand { font-size: 1.1rem; }
     .nav-actions .btn-primary { display: none; }

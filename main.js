@@ -52,52 +52,52 @@ document.addEventListener('DOMContentLoaded', () => {
     };
     window.registerSessionExplored = registerSessionExplored;
 
-    // 1. Initialize Lenis Smooth Scrolling Engine (Responsive & non-delayed on mobile)
+    // 1. Initialize Lenis Smooth Scrolling Engine (Responsive & immediate on mobile touch)
     let lenis = null;
     const isTouch = ('ontouchstart' in window) || (navigator.maxTouchPoints > 0);
     const prefersReducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
 
     if (typeof Lenis !== 'undefined') {
         lenis = new Lenis({
-            duration: prefersReducedMotion ? 0 : 1.2,
+            duration: prefersReducedMotion ? 0 : 1.1,
             easing: (t) => Math.min(1, 1.001 - Math.pow(2, -10 * t)),
             orientation: 'vertical',
             gestureOrientation: 'vertical',
-            smoothWheel: true,
+            smoothWheel: !isTouch, // only smooth wheel on desktop mouse
+            syncTouch: false,      // NEVER lag or delay native touch scrolling on mobile
             wheelMultiplier: 1.0,
-            touchMultiplier: 1.25,
-            syncTouch: true,
-            syncTouchLerp: 0.085,
+            touchMultiplier: 1.0,
             autoResize: true
         });
 
         window.lenis = lenis;
 
         // Synchronize with GSAP ScrollTrigger & 3D Studio Scene & UI Scroll States
-        lenis.on('scroll', (e) => {
+        let isHintFaded = false;
+        const handleScrollUpdate = (currentScroll, e) => {
             if (typeof ScrollTrigger !== 'undefined') ScrollTrigger.update();
             if (window.studioScene && typeof window.studioScene.onScroll === 'function') {
-                window.studioScene.onScroll(e);
+                window.studioScene.onScroll(e || { scroll: currentScroll });
             }
-            const hintPill = document.getElementById('drag-hint-pill');
-            if (hintPill) {
-                const currentScroll = (typeof e.scroll === 'number') ? e.scroll : (window.scrollY || 0);
-                if (currentScroll > 40) {
-                    hintPill.classList.add('fade-out');
-                } else {
-                    hintPill.classList.remove('fade-out');
-                }
+            if (currentScroll > 40 && !isHintFaded) {
+                isHintFaded = true;
+                const hintPill = document.getElementById('drag-hint-pill');
+                if (hintPill) hintPill.classList.add('fade-out');
+            } else if (currentScroll <= 40 && isHintFaded) {
+                isHintFaded = false;
+                const hintPill = document.getElementById('drag-hint-pill');
+                if (hintPill) hintPill.classList.remove('fade-out');
             }
+        };
+
+        lenis.on('scroll', (e) => {
+            const currentScroll = (typeof e.scroll === 'number') ? e.scroll : (window.scrollY || 0);
+            handleScrollUpdate(currentScroll, e);
         });
 
         window.addEventListener('scroll', () => {
-            const hintPill = document.getElementById('drag-hint-pill');
-            if (hintPill) {
-                if (window.scrollY > 40) {
-                    hintPill.classList.add('fade-out');
-                } else {
-                    hintPill.classList.remove('fade-out');
-                }
+            if (!window.lenis) {
+                handleScrollUpdate(window.scrollY || 0);
             }
         }, { passive: true });
 
@@ -165,6 +165,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 ease: "power2.in",
                 onComplete: () => {
                     coverImg.src = p.coverImage;
+                    coverImg.alt = `${p.title} — ${p.tagline} by Shivam Grover`;
                     window.gsap.to(coverImg, { opacity: 1, scale: 1, duration: 0.28, ease: "power2.out" });
                 }
             });
@@ -177,6 +178,7 @@ document.addEventListener('DOMContentLoaded', () => {
             }
         } else if (coverImg) {
             coverImg.src = p.coverImage;
+            coverImg.alt = `${p.title} — ${p.tagline} by Shivam Grover`;
         }
 
         // Populate Metadata
@@ -320,26 +322,38 @@ document.addEventListener('DOMContentLoaded', () => {
         updateProjectDisplay(0, false);
     }
 
-    // 6. Section Navigation State Tracker
+    // 6. Section Navigation State Tracker (Optimized with Cached Geometry to prevent Layout Thrashing)
     const sections = document.querySelectorAll('section[id]');
     const navLinks = document.querySelectorAll('.nav-link, .mobile-nav-link');
+    let cachedSectionOffsets = [];
 
+    const cacheSectionOffsets = () => {
+        cachedSectionOffsets = Array.from(sections).map(sec => ({
+            id: sec.getAttribute('id'),
+            top: sec.offsetTop - 200,
+            height: sec.offsetHeight
+        }));
+    };
+    cacheSectionOffsets();
+    window.addEventListener('resize', cacheSectionOffsets, { passive: true });
+
+    let activeNavSection = '';
     const updateActiveNav = () => {
-        const scrollY = window.lenis ? window.lenis.scroll : window.scrollY;
-        sections.forEach(sec => {
-            const top = sec.offsetTop - 200;
-            const height = sec.offsetHeight;
-            const id = sec.getAttribute('id');
-            if (scrollY >= top && scrollY < top + height) {
-                navLinks.forEach(link => {
-                    link.classList.toggle('active', link.getAttribute('data-section') === id);
-                });
-
-                // Track section exploration in session
-                const capitalizedId = id.charAt(0).toUpperCase() + id.slice(1);
-                registerSessionExplored(capitalizedId);
+        const scrollY = window.lenis ? window.lenis.scroll : (window.scrollY || 0);
+        for (let i = 0; i < cachedSectionOffsets.length; i++) {
+            const item = cachedSectionOffsets[i];
+            if (scrollY >= item.top && scrollY < item.top + item.height) {
+                if (activeNavSection !== item.id) {
+                    activeNavSection = item.id;
+                    navLinks.forEach(link => {
+                        link.classList.toggle('active', link.getAttribute('data-section') === item.id);
+                    });
+                    const capitalizedId = item.id.charAt(0).toUpperCase() + item.id.slice(1);
+                    registerSessionExplored(capitalizedId);
+                }
+                break;
             }
-        });
+        }
     };
 
     if (window.lenis) {
@@ -400,13 +414,13 @@ document.addEventListener('DOMContentLoaded', () => {
         if (!element) return;
         let startX = 0;
         let startY = 0;
-        let hasMoved = false;
+        let isScrolling = false;
 
         element.addEventListener('touchstart', (e) => {
             if (e.touches.length > 0) {
                 startX = e.touches[0].clientX;
                 startY = e.touches[0].clientY;
-                hasMoved = false;
+                isScrolling = false;
             }
         }, { passive: true });
 
@@ -415,13 +429,19 @@ document.addEventListener('DOMContentLoaded', () => {
                 const dx = Math.abs(e.touches[0].clientX - startX);
                 const dy = Math.abs(e.touches[0].clientY - startY);
                 if (dx > 8 || dy > 8) {
-                    hasMoved = true;
+                    isScrolling = true;
                 }
             }
         }, { passive: true });
 
+        element.addEventListener('touchend', (e) => {
+            if (isScrolling) {
+                e.stopPropagation();
+            }
+        }, { passive: true });
+
         element.addEventListener('click', (e) => {
-            if (hasMoved) {
+            if (isScrolling) {
                 e.preventDefault();
                 e.stopImmediatePropagation();
                 return;

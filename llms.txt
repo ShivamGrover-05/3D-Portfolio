@@ -1,0 +1,33 @@
+# Shivam Grover — Creative Developer & Automation Specialist
+
+> Official portfolio of Shivam Grover: Creative developer and automation specialist based in New Delhi, India. Specializing in interactive 3D WebGL experiences, frontend architecture, and enterprise RevOps / workflow automations.
+
+## About
+- **Name**: Shivam Grover
+- **Title**: Creative Developer & Automation Specialist
+- **Location**: New Delhi, India
+- **Portfolio**: https://3-d-portfolio-mu-seven.vercel.app/
+- **Focus Areas**: Interactive 3D Web Experiences (Three.js/WebGL), Modern Frontend Development, RevOps & Workflow Automation (n8n, HubSpot CRM, webhooks).
+
+## Projects
+- [Aevonix 3D Controller](https://aevonix-controller.vercel.app/): Futuristic real-time 3D hardware visualizer and interactive product showcase engineered with TypeScript, Three.js, WebGL shaders, and GSAP camera choreography. Source: https://github.com/ShivamGrover-05/aevonix-controller
+- [CollegesPathshala](https://collegespathshala.com/#home): Comprehensive higher education discovery and career counseling platform with degree comparison engines and automated lead routing. Built with Next.js/React, TailwindCSS, and REST APIs.
+- [Vacation Visits](https://vacationvisits.in/): International luxury travel platform featuring responsive itinerary discovery, localized booking inquiries, and automated customer lead capture. Built with React and TailwindCSS.
+- [Saga Holidays](https://sagaholidays.in/): Modern tour operator portal featuring glassmorphic UI, curated package filters, and instant WhatsApp inquiry dispatch.
+- **AI & Workflow Automation**: End-to-end RevOps pipelines integrating custom webhooks, n8n orchestration, HubSpot CRM synchronization, and automated lead enrichment.
+
+## Skills
+- **3D & Frontend**: Three.js, WebGL, GLSL Shaders, GSAP Animations, Lenis Scroll, React, Next.js, TypeScript, JavaScript (ESNext), TailwindCSS, Semantic HTML5, Modern CSS3.
+- **Automation & RevOps**: n8n Workflow Automation, HubSpot CRM Architecture, Zapier, Webhooks, REST API Integrations, Lead Routing & Ingestion Engines.
+- **Tools & Workflow**: Node.js, Git, GitHub, Vite, Vercel, VS Code.
+
+## Experience
+- **RevOps & Automation Intern** at Growthspree (Jun 2026 — Present): Engineered HubSpot automations, streamlined inbound lead qualification workflows, and developed multi-channel data integration pipelines.
+- **Freelance Web Developer** (2025 — 2026): Designed and delivered responsive client platforms including CollegesPathshala, Vacation Visits, and Saga Holidays with glassmorphism UI and form automations.
+- **Education**: Bachelor of Computer Applications (BCA) at MERI CET / University (2024 — Present).
+
+## Contact & Profiles
+- **Website**: https://3-d-portfolio-mu-seven.vercel.app/
+- **Email**: codewithshivamdev@gmail.com
+- **GitHub**: https://github.com/ShivamGrover-05
+- **LinkedIn**: https://www.linkedin.com/in/shivamgrover-dev/
