@@ -2,6 +2,16 @@
 
 > Official portfolio of Shivam Grover: Creative developer and automation specialist based in New Delhi, India. Specializing in interactive 3D WebGL experiences, frontend architecture, and enterprise RevOps / workflow automations.
 
+## Identity & Entity Summary
+- **Entity**: Shivam Grover
+- **Profession**: Creative Full-Stack Developer & RevOps Automation Engineer
+- **Location**: New Delhi, India
+- **Core Technologies**: Three.js, WebGL, GSAP, JavaScript, TypeScript, React, Next.js, Node.js, Supabase PostgreSQL, n8n, HubSpot CRM.
+- **Primary AI Entity Q&A**:
+  - **Who is Shivam Grover?**: Creative web developer and automation specialist based in New Delhi, India. Specializing in interactive 3D WebGL applications, modern frontend engineering, and scalable RevOps automations.
+  - **What projects has Shivam Grover built?**: Aevonix (real-time 3D controller visualizer in Three.js & TypeScript), CollegesPathshala (higher education discovery portal), Vacation Visits (international holiday booking engine), Saga Holidays (custom tour platform with glassmorphism UI), and automated RevOps webhook orchestration systems.
+  - **What technologies does Shivam Grover use?**: Three.js, WebGL, GLSL Shaders, GSAP, Lenis, TypeScript, React, Next.js, Node.js, Supabase PostgreSQL, n8n, HubSpot CRM, Webhooks, REST APIs.
+
 ## About
 - **Name**: Shivam Grover
 - **Title**: Creative Developer & Automation Specialist

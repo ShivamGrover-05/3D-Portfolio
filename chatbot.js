@@ -579,9 +579,9 @@
                 return `<button class="chat-action-btn" data-chat-action="${type}:${target}"><i data-lucide="sparkles" style="width:12px;height:12px;"></i> ${label}</button>`;
             });
 
-            // 7. Regular Markdown Links: [label](url)
-            html = html.replace(/\[([^\]]+)\]\((https?:\/\/[^\s)]+)\)/g, '<a href="$2" target="_blank" rel="noopener" class="chat-ext-link">$1 <i data-lucide="external-link" style="width:10px;height:10px;"></i></a>');
-            html = html.replace(/\[([^\]]+)\]\(mailto:([^\s)]+)\)/g, '<a href="mailto:$2" class="chat-ext-link">$1 <i data-lucide="mail" style="width:10px;height:10px;"></i></a>');
+            // 7. Regular Markdown Links: [label](url) - strictly enforce https:// or http:// or mailto:
+            html = html.replace(/\[([^\]]+)\]\((https?:\/\/[^\s)]+)\)/g, '<a href="$2" target="_blank" rel="noopener noreferrer" class="chat-ext-link">$1 <i data-lucide="external-link" style="width:10px;height:10px;"></i></a>');
+            html = html.replace(/\[([^\]]+)\]\(mailto:([a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,})\)/g, '<a href="mailto:$2" class="chat-ext-link">$1 <i data-lucide="mail" style="width:10px;height:10px;"></i></a>');
 
             // 8. Bullet points
             html = html.replace(/^\s*[\-\*]\s+(.*)$/gim, '<li class="chat-bullet-li"><span class="chat-bullet-dot"></span><span>$1</span></li>');
@@ -591,6 +591,25 @@
 
             // 9. Paragraph breaks
             html = html.replace(/\n{2,}/g, '<br><br>');
+
+            // 10. Strict Defense-in-Depth XSS Sanitization
+            if (typeof window !== 'undefined' && window.DOMPurify && typeof window.DOMPurify.sanitize === 'function') {
+                html = window.DOMPurify.sanitize(html, {
+                    ALLOWED_TAGS: ['b', 'i', 'em', 'strong', 'a', 'p', 'br', 'ul', 'ol', 'li', 'code', 'pre', 'h3', 'h4', 'span', 'button', 'div', 'img'],
+                    ALLOWED_ATTR: ['href', 'target', 'rel', 'class', 'style', 'title', 'aria-label', 'data-chat-action', 'data-raw-text', 'src', 'alt', 'width', 'height', 'data-lucide'],
+                    ALLOWED_URI_REGEXP: /^(?:(?:https?|mailto):|[^a-z]|[a-z+.\-]+(?:[^a-z+.\-:]|$))/i
+                });
+            } else {
+                // Fallback Sanitizer: strip dangerous tags and event handlers
+                html = html
+                    .replace(/<script\b[^<]*(?:(?!<\/script>)<[^<]*)*<\/script>/gi, '')
+                    .replace(/<iframe\b[^<]*(?:(?!<\/iframe>)<[^<]*)*<\/iframe>/gi, '')
+                    .replace(/<object\b[^<]*(?:(?!<\/object>)<[^<]*)*<\/object>/gi, '')
+                    .replace(/<embed\b[^<]*(?:(?!<\/embed>)<[^<]*)*<\/embed>/gi, '')
+                    .replace(/\s*on\w+\s*=\s*["'][^"']*["']/gi, '')
+                    .replace(/\s*on\w+\s*=\s*[^\s>]+/gi, '')
+                    .replace(/href\s*=\s*["']\s*(?:javascript|data|vbscript):[^"']*["']/gi, 'href="#"');
+            }
 
             return html;
         }

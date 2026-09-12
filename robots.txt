@@ -1,4 +1,6 @@
 User-agent: *
 Allow: /
+Disallow: /api/
 
 Sitemap: https://3-d-portfolio-mu-seven.vercel.app/sitemap.xml
+

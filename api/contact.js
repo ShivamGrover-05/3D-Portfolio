@@ -1,6 +1,30 @@
+// Shivam Grover Portfolio - Production Hardened Contact Dispatch API
+// Security: Anti-Spam Honeypot, Strict Validation, Rate Limiting, Supabase PostgreSQL, Nodemailer SMTP
 import nodemailer from 'nodemailer';
+import { createClient } from '@supabase/supabase-js';
 
-// Reusable Transporter Singleton
+// 1. Allowed Origins for CORS (Strict Defense-in-depth: No wildcard '*')
+const ALLOWED_ORIGINS = new Set([
+    'https://3-d-portfolio-mu-seven.vercel.app',
+    'http://localhost:3000',
+    'http://127.0.0.1:3000'
+]);
+
+function setCorsAndSecurityHeaders(req, res) {
+    res.setHeader('X-Content-Type-Options', 'nosniff');
+    res.setHeader('X-Frame-Options', 'DENY');
+    res.setHeader('Referrer-Policy', 'strict-origin-when-cross-origin');
+
+    const origin = req.headers['origin'];
+    if (origin && ALLOWED_ORIGINS.has(origin)) {
+        res.setHeader('Access-Control-Allow-Origin', origin);
+        res.setHeader('Access-Control-Allow-Credentials', 'true');
+        res.setHeader('Access-Control-Allow-Methods', 'POST, OPTIONS');
+        res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization, X-Requested-With');
+    }
+}
+
+// 2. Transporter Singleton (Reuses SMTP connections)
 let transporter = null;
 
 function getMailTransporter() {
@@ -8,7 +32,7 @@ function getMailTransporter() {
     const pass = process.env.GMAIL_APP_PASSWORD;
 
     if (!pass) {
-        throw new Error('GMAIL_APP_PASSWORD environment variable is not configured on server.');
+        throw new Error('Email dispatch configuration is pending on server.');
     }
 
     if (!transporter) {
@@ -23,7 +47,29 @@ function getMailTransporter() {
     return transporter;
 }
 
-// In-memory sliding window rate limiter for contact form (max 5 transmissions / 10 minutes per IP)
+// 3. Supabase Admin Client for PostgreSQL Contact Storage
+let supabaseAdmin = null;
+
+function getSupabaseAdmin() {
+    const url = process.env.SUPABASE_URL;
+    const serviceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
+
+    if (!url || !serviceRoleKey) {
+        return null;
+    }
+
+    if (!supabaseAdmin) {
+        supabaseAdmin = createClient(url, serviceRoleKey, {
+            auth: {
+                persistSession: false,
+                autoRefreshToken: false
+            }
+        });
+    }
+    return supabaseAdmin;
+}
+
+// 4. In-Memory Sliding-Window Rate Limiter (5 transmissions / 10 minutes per IP)
 const contactRateLimitMap = new Map();
 const CONTACT_WINDOW_MS = 10 * 60 * 1000;
 const MAX_CONTACTS_PER_WINDOW = 5;
@@ -37,7 +83,8 @@ function isContactRateLimited(ip) {
     }
     recent.push(now);
     contactRateLimitMap.set(ip, recent);
-    
+
+    // Garbage-collect expired IPs when map grows large
     if (contactRateLimitMap.size > 1000) {
         for (const [k, v] of contactRateLimitMap.entries()) {
             if (v.every(t => now - t >= CONTACT_WINDOW_MS)) {
@@ -48,7 +95,7 @@ function isContactRateLimited(ip) {
     return false;
 }
 
-// Helper to sanitize HTML content against script/DOM injection
+// 5. HTML Entity Sanitizer (XSS Mitigation)
 function escapeHtml(str) {
     if (!str) return '';
     return String(str)
@@ -59,12 +106,21 @@ function escapeHtml(str) {
         .replace(/'/g, '&#039;');
 }
 
-export default async function handler(req, res) {
-    // 1. Security Headers
-    res.setHeader('X-Content-Type-Options', 'nosniff');
-    res.setHeader('X-Frame-Options', 'DENY');
+// 6. Header Injection Strip (Removes CRLF \r \n to prevent email header splitting)
+function stripHeaderInjection(str) {
+    if (!str) return '';
+    return String(str).replace(/[\r\n\t]/g, ' ').trim();
+}
 
-    // 2. Only allow POST method
+export default async function handler(req, res) {
+    setCorsAndSecurityHeaders(req, res);
+
+    // Handle preflight
+    if (req.method === 'OPTIONS') {
+        return res.status(200).end();
+    }
+
+    // Only allow POST
     if (req.method !== 'POST') {
         res.setHeader('Allow', ['POST']);
         return res.status(405).json({
@@ -73,7 +129,16 @@ export default async function handler(req, res) {
         });
     }
 
-    // 3. Contact Anti-Spam Rate Limit
+    // Enforce Content-Type
+    const contentType = req.headers['content-type'] || '';
+    if (!contentType.includes('application/json')) {
+        return res.status(415).json({
+            success: false,
+            message: 'Unsupported Media Type. Expected application/json.'
+        });
+    }
+
+    // Rate Limiting
     const clientIp = req.headers['x-forwarded-for']?.split(',')[0]?.trim() || req.socket?.remoteAddress || '127.0.0.1';
     if (isContactRateLimited(clientIp)) {
         return res.status(429).json({
@@ -84,11 +149,19 @@ export default async function handler(req, res) {
 
     try {
         const body = req.body || {};
+
+        // Body size boundary validation
+        if (JSON.stringify(body).length > 50000) {
+            return res.status(413).json({
+                success: false,
+                message: 'Payload Too Large. Inquiry exceeds maximum allowed size.'
+            });
+        }
+
         const { name, email, subject, message, phone, website } = body;
 
-        // 2. Honeypot Anti-Spam Check (hidden field 'website')
+        // Honeypot anti-spam check (hidden field 'website')
         if (website && String(website).trim() !== '') {
-            // Silently absorb spam submissions without alerting bots
             console.warn('Honeypot triggered, discarding spam submission.');
             return res.status(200).json({
                 success: true,
@@ -96,16 +169,16 @@ export default async function handler(req, res) {
             });
         }
 
-        // 3. Strict Input Validation & Length Bounds
-        if (!name || typeof name !== 'string' || name.trim().length < 2 || name.length > 100) {
+        // Strict Server-Side Input Validation
+        if (!name || typeof name !== 'string' || name.trim().length < 2 || name.trim().length > 100) {
             return res.status(400).json({
                 success: false,
                 message: 'Please provide a valid name (2–100 characters).'
             });
         }
 
-        const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-        if (!email || typeof email !== 'string' || !emailRegex.test(email.trim()) || email.length > 120) {
+        const emailRegex = /^[a-zA-Z0-9.!#$%&'*+/=?^_`{|}~-]+@[a-zA-Z0-9](?:[a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?(?:\.[a-zA-Z0-9](?:[a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?)+$/;
+        if (!email || typeof email !== 'string' || !emailRegex.test(email.trim()) || email.trim().length > 120) {
             return res.status(400).json({
                 success: false,
                 message: 'Please provide a valid email address.'
@@ -116,43 +189,96 @@ export default async function handler(req, res) {
             ? subject.trim().slice(0, 150)
             : 'New Portfolio Inquiry';
 
-        if (!message || typeof message !== 'string' || message.trim().length < 5 || message.length > 5000) {
+        if (!message || typeof message !== 'string' || message.trim().length < 5 || message.trim().length > 5000) {
             return res.status(400).json({
                 success: false,
                 message: 'Please provide a message between 5 and 5,000 characters.'
             });
         }
 
-        const cleanName = escapeHtml(name.trim());
-        const cleanEmail = email.trim().toLowerCase();
-        const cleanSubject = escapeHtml(validatedSubject);
+        const cleanName = escapeHtml(stripHeaderInjection(name));
+        const cleanEmail = stripHeaderInjection(email).toLowerCase();
+        const cleanSubject = escapeHtml(stripHeaderInjection(validatedSubject));
         const cleanMessage = escapeHtml(message.trim());
-        const cleanPhone = phone ? escapeHtml(String(phone).slice(0, 30)) : 'Not provided';
+        const cleanPhone = phone ? escapeHtml(stripHeaderInjection(String(phone).slice(0, 30))) : 'Not provided';
         const timestamp = new Date().toUTCString();
 
+        // Check for authenticated user token to associate submission
+        let linkedProfileId = null;
+        const authHeader = req.headers['authorization'] || '';
+        const admin = getSupabaseAdmin();
+
+        if (authHeader.startsWith('Bearer ') && admin) {
+            const token = authHeader.slice(7).trim();
+            try {
+                const { data: authData } = await admin.auth.getUser(token);
+                if (authData?.user) {
+                    // Resolve profile UUID
+                    const { data: profileRecord } = await admin
+                        .from('profiles')
+                        .select('id')
+                        .eq('auth_user_id', authData.user.id)
+                        .maybeSingle();
+
+                    if (profileRecord) {
+                        linkedProfileId = profileRecord.id;
+                    }
+                }
+            } catch (authResolveErr) {
+                console.warn('Could not resolve user token for contact submission:', authResolveErr.message);
+            }
+        }
+
+        // Persist submission to Supabase PostgreSQL (parameterized insert)
+        let dbSaved = false;
+        if (admin) {
+            try {
+                const { error: dbInsertError } = await admin
+                    .from('contact_submissions')
+                    .insert({
+                        user_id: linkedProfileId,
+                        name: stripHeaderInjection(name).slice(0, 100),
+                        email: cleanEmail.slice(0, 120),
+                        subject: stripHeaderInjection(validatedSubject).slice(0, 150),
+                        message: message.trim().slice(0, 5000),
+                        phone: phone ? stripHeaderInjection(String(phone)).slice(0, 30) : null,
+                        status: 'pending'
+                    });
+
+                if (!dbInsertError) {
+                    dbSaved = true;
+                } else {
+                    console.error('PostgreSQL contact submission insert error:', dbInsertError.message);
+                }
+            } catch (dbErr) {
+                console.error('Database connection error on contact submission:', dbErr.message);
+            }
+        }
+
+        // Email Dispatch
         const ownerEmail = process.env.CONTACT_EMAIL || process.env.GMAIL_USER || 'codewithshivamdev@gmail.com';
         const mailClient = getMailTransporter();
 
-        // 4. Send Owner Notification Email
+        // 1. Owner Notification Email
         const ownerMailOptions = {
             from: `"Shivam Portfolio Dispatch" <${ownerEmail}>`,
             to: ownerEmail,
             replyTo: cleanEmail,
             subject: `⚡ [Portfolio Inquiry] ${cleanSubject} — from ${cleanName}`,
-            text: `NEW PORTFOLIO INQUIRY\n\nName: ${cleanName}\nEmail: ${cleanEmail}\nPhone: ${cleanPhone}\nSubject: ${cleanSubject}\nDate: ${timestamp}\n\nMessage:\n${message.trim()}\n\n---\nReply directly to this email to contact ${cleanName}.`,
+            text: `NEW PORTFOLIO INQUIRY\n\nName: ${cleanName}\nEmail: ${cleanEmail}\nPhone: ${cleanPhone}\nSubject: ${cleanSubject}\nDate: ${timestamp}\nAuthenticated: ${linkedProfileId ? 'Yes' : 'No'}\n\nMessage:\n${message.trim()}\n\n---\nReply directly to this email to contact ${cleanName}.`,
             html: `
                 <!DOCTYPE html>
                 <html>
                 <body style="margin: 0; padding: 24px; background-color: #06070d; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;">
                     <div style="max-width: 600px; margin: 0 auto; background: #0c1020; border: 1px solid rgba(0, 243, 255, 0.35); border-radius: 16px; overflow: hidden; box-shadow: 0 16px 40px rgba(0,0,0,0.6);">
                         <div style="background: linear-gradient(135deg, rgba(0, 243, 255, 0.15), rgba(108, 92, 231, 0.25)); padding: 24px; border-bottom: 1px solid rgba(255,255,255,0.08);">
-                            <div style="font-family: monospace; font-size: 11px; color: #00f3ff; letter-spacing: 2px; text-transform: uppercase;">SHIVAM.DEV // SYSTEM DISPATCH</div>
+                            <div style="font-family: monospace; font-size: 11px; color: #00f3ff; letter-spacing: 2px; text-transform: uppercase;">SHIVAM.DEV // SECURE DISPATCH</div>
                             <h1 style="margin: 8px 0 0 0; font-size: 22px; color: #ffffff; font-weight: 700;">New Portfolio Inquiry</h1>
                         </div>
                         <div style="padding: 24px;">
                             <table style="width: 100%; border-collapse: collapse; margin-bottom: 24px;">
                                 <tr>
-                                    <td style="padding: 8px 0; color: #8e95a5; width: 100px; font-size: 13px;"><strong>Sender Name</strong></td>
+                                    <td style="padding: 8px 0; color: #8e95a5; width: 110px; font-size: 13px;"><strong>Sender Name</strong></td>
                                     <td style="padding: 8px 0; color: #ffffff; font-size: 14px; font-weight: 600;">${cleanName}</td>
                                 </tr>
                                 <tr>
@@ -166,6 +292,10 @@ export default async function handler(req, res) {
                                 <tr>
                                     <td style="padding: 8px 0; color: #8e95a5; font-size: 13px;"><strong>Subject</strong></td>
                                     <td style="padding: 8px 0; color: #00ff9d; font-size: 14px; font-weight: 600;">${cleanSubject}</td>
+                                </tr>
+                                <tr>
+                                    <td style="padding: 8px 0; color: #8e95a5; font-size: 13px;"><strong>DB Log</strong></td>
+                                    <td style="padding: 8px 0; color: ${dbSaved ? '#00ff9d' : '#f59e0b'}; font-size: 13px; font-family: monospace;">${dbSaved ? 'Saved to PostgreSQL' : 'Logged via SMTP'}</td>
                                 </tr>
                                 <tr>
                                     <td style="padding: 8px 0; color: #8e95a5; font-size: 13px;"><strong>Received At</strong></td>
@@ -188,10 +318,9 @@ export default async function handler(req, res) {
             `
         };
 
-        const ownerResult = await mailClient.sendMail(ownerMailOptions);
-        console.log('OWNER EMAIL: SUCCESS ->', ownerResult.messageId || 'sent');
+        await mailClient.sendMail(ownerMailOptions);
 
-        // 5. Send Visitor Confirmation Thank-You Email
+        // 2. Visitor Confirmation Email
         let visitorDelivered = false;
         try {
             const visitorMailOptions = {
@@ -215,7 +344,7 @@ export default async function handler(req, res) {
                                     Hi <strong style="color: #ffffff;">${cleanName}</strong>,
                                 </p>
                                 <p style="font-size: 14px; color: #cbd5e1; line-height: 1.65;">
-                                    Thank you for reaching out through my interactive 3D portfolio. Your inquiry regarding <strong style="color: #00f3ff;">"${cleanSubject}"</strong> has been successfully dispatched to my direct inbox.
+                                    Thank you for reaching out through my interactive 3D portfolio. Your inquiry regarding <strong style="color: #00f3ff;">"${cleanSubject}"</strong> has been successfully dispatched.
                                 </p>
                                 <p style="font-size: 14px; color: #cbd5e1; line-height: 1.65;">
                                     I review all communications promptly and will follow up with you within <strong>24 hours</strong>.
@@ -225,7 +354,7 @@ export default async function handler(req, res) {
                                     <div style="color: #94a3b8; font-size: 13px; font-style: italic; line-height: 1.6; white-space: pre-wrap;">"${cleanMessage.slice(0, 300)}${cleanMessage.length > 300 ? '...' : ''}"</div>
                                 </div>
                                 <p style="font-size: 13px; color: #94a3b8; line-height: 1.6;">
-                                    In the meantime, feel free to connect with me across my network coordinates:
+                                    In the meantime, feel free to connect across my network channels:
                                 </p>
                                 <div style="display: flex; gap: 12px; margin: 20px 0;">
                                     <a href="https://linkedin.com/in/shivamgrover-dev" style="background: rgba(108, 92, 231, 0.2); border: 1px solid #6c5ce7; color: #a29bfe; padding: 8px 14px; border-radius: 8px; text-decoration: none; font-size: 12px; font-weight: 600;">LinkedIn Profile</a>
@@ -244,25 +373,24 @@ export default async function handler(req, res) {
                 `
             };
 
-            const visitorResult = await mailClient.sendMail(visitorMailOptions);
+            await mailClient.sendMail(visitorMailOptions);
             visitorDelivered = true;
-            console.log('VISITOR EMAIL: SUCCESS ->', visitorResult.messageId || 'sent');
         } catch (confirmErr) {
             console.warn('VISITOR EMAIL: FAILED (non-fatal) ->', confirmErr.message || confirmErr);
         }
 
         return res.status(200).json({
             success: true,
-            ownerEmailSent: true,
+            dbSaved,
             visitorEmailSent: visitorDelivered,
             message: 'Your message was successfully sent! A confirmation has been emailed to you.'
         });
 
     } catch (error) {
-        console.error('Contact API Internal Error:', error);
+        console.error('Contact API Internal Error:', error.message);
         return res.status(500).json({
             success: false,
-            message: "Message couldn't be sent right now. Please try again or email directly to codewithshivamdev@gmail.com."
+            message: "Message could not be sent right now. Please try again or email directly to codewithshivamdev@gmail.com."
         });
     }
 }

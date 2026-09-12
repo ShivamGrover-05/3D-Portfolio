@@ -5034,3 +5034,296 @@ body.fallback-2d-mode #content-layer {
     box-shadow: 0 0 25px rgba(0, 243, 255, 0.4);
 }
 
+/* ===================================================
+   GOOGLE AUTHENTICATION & USER PROFILE STYLES
+   =================================================== */
+
+.auth-nav-container {
+    display: inline-flex;
+    align-items: center;
+}
+
+.auth-btn-google {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    padding: 7px 14px;
+    background: rgba(255, 255, 255, 0.05);
+    border: 1px solid rgba(255, 255, 255, 0.15);
+    border-radius: 9999px;
+    color: #e2e8f0;
+    font-family: var(--font-main, sans-serif);
+    font-size: 0.82rem;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.25s cubic-bezier(0.16, 1, 0.3, 1);
+    white-space: nowrap;
+}
+
+.auth-btn-google:hover,
+.auth-btn-google:focus-visible {
+    background: rgba(255, 255, 255, 0.12);
+    border-color: rgba(0, 243, 255, 0.45);
+    color: #ffffff;
+    box-shadow: 0 0 16px rgba(0, 243, 255, 0.2);
+    outline: none;
+}
+
+.auth-btn-google svg.google-icon {
+    flex-shrink: 0;
+}
+
+.auth-user-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    padding: 4px 12px 4px 4px;
+    background: rgba(9, 13, 25, 0.85);
+    border: 1px solid rgba(0, 243, 255, 0.4);
+    border-radius: 9999px;
+    cursor: pointer;
+    transition: all 0.25s ease;
+}
+
+.auth-user-badge:hover,
+.auth-user-badge:focus-visible {
+    border-color: var(--accent-cyan);
+    box-shadow: 0 0 15px rgba(0, 243, 255, 0.25);
+    outline: none;
+}
+
+.auth-avatar-img {
+    width: 26px;
+    height: 26px;
+    border-radius: 50%;
+    object-fit: cover;
+    border: 1.5px solid var(--accent-cyan);
+    background: #111827;
+}
+
+.auth-avatar-img.lg {
+    width: 48px;
+    height: 48px;
+    border-width: 2px;
+}
+
+.auth-username-text {
+    font-family: var(--font-mono, monospace);
+    font-size: 0.8rem;
+    font-weight: 600;
+    color: #f1f5f9;
+    max-width: 110px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+/* Mobile Auth Component */
+.mobile-auth-section {
+    width: 100%;
+    margin-bottom: 14px;
+}
+
+.mobile-auth-btn {
+    width: 100%;
+    justify-content: center;
+    padding: 11px 16px;
+    border-radius: 12px;
+    font-size: 0.9rem;
+}
+
+.mobile-auth-user-card {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 10px 14px;
+    background: rgba(12, 17, 34, 0.8);
+    border: 1px solid rgba(0, 243, 255, 0.3);
+    border-radius: 12px;
+}
+
+.mobile-auth-meta {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+}
+
+.mobile-auth-name {
+    font-size: 0.9rem;
+    font-weight: 700;
+    color: #ffffff;
+}
+
+.mobile-auth-status {
+    font-family: var(--font-mono, monospace);
+    font-size: 0.72rem;
+    color: #00ff9d;
+}
+
+.auth-logout-btn {
+    background: rgba(239, 68, 68, 0.15);
+    border: 1px solid rgba(239, 68, 68, 0.35);
+    color: #fca5a5;
+    border-radius: 8px;
+    padding: 6px 8px;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.auth-logout-btn:hover {
+    background: rgba(239, 68, 68, 0.3);
+    color: #ffffff;
+    border-color: #ef4444;
+}
+
+/* Account Dialog Modal */
+.account-dialog {
+    max-width: 480px;
+    width: 92%;
+}
+
+.account-profile-content {
+    padding: 10px 4px 4px 4px;
+}
+
+.account-card-body {
+    display: flex;
+    align-items: center;
+    gap: 18px;
+    padding: 20px;
+    background: rgba(6, 8, 16, 0.8);
+    border: 1px solid rgba(255, 255, 255, 0.08);
+    border-radius: 14px;
+    margin-bottom: 22px;
+}
+
+.account-modal-avatar {
+    width: 60px;
+    height: 60px;
+    border-radius: 50%;
+    object-fit: cover;
+    border: 2px solid var(--accent-cyan);
+    box-shadow: 0 0 20px rgba(0, 243, 255, 0.25);
+    background: #111827;
+}
+
+.account-details-col {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+    overflow: hidden;
+}
+
+.account-detail-name {
+    font-size: 1.15rem;
+    font-weight: 700;
+    color: #ffffff;
+    margin: 0;
+}
+
+.account-detail-email {
+    font-family: var(--font-mono, monospace);
+    font-size: 0.82rem;
+    color: #94a3b8;
+    margin: 0 0 8px 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.account-tags-row {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+}
+
+.account-tag {
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+    padding: 3px 9px;
+    border-radius: 6px;
+    font-family: var(--font-mono, monospace);
+    font-size: 0.68rem;
+    font-weight: 700;
+    letter-spacing: 0.5px;
+}
+
+.account-tag.cyan {
+    background: rgba(0, 243, 255, 0.12);
+    border: 1px solid rgba(0, 243, 255, 0.35);
+    color: var(--accent-cyan);
+}
+
+.account-tag.purple {
+    background: rgba(108, 92, 231, 0.15);
+    border: 1px solid rgba(108, 92, 231, 0.4);
+    color: #a29bfe;
+}
+
+.account-actions-row {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 12px;
+}
+
+.danger-btn {
+    color: #fca5a5 !important;
+    border-color: rgba(239, 68, 68, 0.4) !important;
+}
+
+.danger-btn:hover {
+    background: rgba(239, 68, 68, 0.2) !important;
+    color: #ffffff !important;
+    border-color: #ef4444 !important;
+}
+
+/* Studio OS Auth Card */
+.auth-status-card {
+    grid-column: 1 / -1;
+}
+
+.os-auth-box {
+    padding: 16px;
+    background: rgba(6, 8, 16, 0.6);
+    border-radius: 10px;
+    border: 1px solid rgba(255, 255, 255, 0.05);
+}
+
+.os-auth-desc {
+    font-size: 0.85rem;
+    color: #94a3b8;
+    line-height: 1.5;
+    margin: 0 0 14px 0;
+}
+
+.os-user-profile-row {
+    display: flex;
+    align-items: center;
+    gap: 16px;
+}
+
+.os-user-info {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+}
+
+.os-user-fullname {
+    font-size: 1rem;
+    font-weight: 700;
+    color: #ffffff;
+}
+
+.os-user-email {
+    font-family: var(--font-mono, monospace);
+    font-size: 0.78rem;
+    color: #94a3b8;
+    margin-bottom: 6px;
+}
+
+

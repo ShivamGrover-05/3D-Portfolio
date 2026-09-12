@@ -86,6 +86,7 @@ const server = http.createServer(async (req, res) => {
                 }
 
                 req.body = parsedBody;
+                req.query = Object.fromEntries(parsedUrl.searchParams.entries());
 
                 // Mock Vercel response helper
                 const mockRes = {

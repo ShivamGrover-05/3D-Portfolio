@@ -9,7 +9,7 @@
     "start": "node dev-server.mjs"
   },
   "dependencies": {
-    "nodemailer": "^6.9.16"
+    "@supabase/supabase-js": "^2.116.0",
+    "nodemailer": "^10.0.9"
   }
 }
-

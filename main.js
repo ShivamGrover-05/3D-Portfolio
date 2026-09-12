@@ -1068,9 +1068,14 @@ document.addEventListener('DOMContentLoaded', () => {
             triggerHaptic('action');
 
             try {
+                const headers = { 'Content-Type': 'application/json' };
+                if (window.currentUserSession && window.currentUserSession.access_token) {
+                    headers['Authorization'] = `Bearer ${window.currentUserSession.access_token}`;
+                }
+
                 const response = await fetch('/api/contact', {
                     method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
+                    headers,
                     body: JSON.stringify({
                         name,
                         email,
@@ -1152,8 +1157,273 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     });
 
-    // 12. Initialize Virtual Computer OS
+    // 12. Supabase Google Authentication & Identity Subsystem
+    class PortfolioAuthManager {
+        constructor() {
+            this.client = null;
+            this.session = null;
+            this.profile = null;
+            this.init();
+        }
+
+        async init() {
+            try {
+                // Fetch public Supabase configuration dynamically from server
+                const res = await fetch('/api/auth?action=config');
+                const data = await res.json();
+                if (!data.success || !data.configured || typeof window.supabase === 'undefined') {
+                    return;
+                }
+
+                this.client = window.supabase.createClient(data.supabaseUrl, data.supabaseAnonKey, {
+                    auth: {
+                        persistSession: true,
+                        autoRefreshToken: true,
+                        detectSessionInUrl: true
+                    }
+                });
+
+                window.supabaseClient = this.client;
+
+                // Handle Auth state change events
+                this.client.auth.onAuthStateChange(async (event, session) => {
+                    this.session = session;
+                    window.currentUserSession = session;
+
+                    if (session && session.user) {
+                        await this.handleUserSignedIn(session);
+                    } else {
+                        this.handleUserSignedOut();
+                    }
+                });
+
+                // Check initial session
+                const { data: sessionData } = await this.client.auth.getSession();
+                if (sessionData && sessionData.session) {
+                    this.session = sessionData.session;
+                    window.currentUserSession = sessionData.session;
+                    await this.handleUserSignedIn(sessionData.session);
+                }
+
+                this.setupEventListeners();
+            } catch (err) {
+                console.warn('Authentication system initialization note:', err.message);
+            }
+        }
+
+        async handleUserSignedIn(session) {
+            const user = session.user;
+            const meta = user.user_metadata || {};
+            const name = meta.full_name || meta.name || user.email?.split('@')[0] || 'User';
+            const email = user.email || '';
+            const avatarUrl = meta.avatar_url || meta.picture || '';
+
+            // Update Navbar UI
+            const navLoginBtn = document.getElementById('auth-login-btn');
+            const navUserBadge = document.getElementById('auth-user-badge');
+            const navAvatar = document.getElementById('auth-user-avatar');
+            const navName = document.getElementById('auth-user-name');
+
+            if (navLoginBtn) navLoginBtn.style.display = 'none';
+            if (navUserBadge) {
+                navUserBadge.style.display = 'inline-flex';
+                if (navAvatar) navAvatar.src = avatarUrl || 'assets/favicon-32x32.png';
+                if (navName) navName.textContent = name;
+            }
+
+            // Update Mobile Drawer UI
+            const mobLoginBtn = document.getElementById('mobile-auth-login-btn');
+            const mobUserCard = document.getElementById('mobile-auth-user-card');
+            const mobAvatar = document.getElementById('mobile-auth-avatar');
+            const mobName = document.getElementById('mobile-auth-name');
+
+            if (mobLoginBtn) mobLoginBtn.style.display = 'none';
+            if (mobUserCard) {
+                mobUserCard.style.display = 'flex';
+                if (mobAvatar) mobAvatar.src = avatarUrl || 'assets/favicon-32x32.png';
+                if (mobName) mobName.textContent = name;
+            }
+
+            // Update Studio OS Profile Tab UI
+            const osGuestView = document.getElementById('os-auth-guest-view');
+            const osUserView = document.getElementById('os-auth-user-view');
+            const osAvatar = document.getElementById('os-user-avatar');
+            const osName = document.getElementById('os-user-name');
+            const osEmail = document.getElementById('os-user-email');
+
+            if (osGuestView) osGuestView.style.display = 'none';
+            if (osUserView) {
+                osUserView.style.display = 'block';
+                if (osAvatar) osAvatar.src = avatarUrl || 'assets/favicon-32x32.png';
+                if (osName) osName.textContent = name;
+                if (osEmail) osEmail.textContent = email;
+            }
+
+            // Update Account Modal
+            const modalAvatar = document.getElementById('modal-account-avatar');
+            const modalName = document.getElementById('modal-account-name');
+            const modalEmail = document.getElementById('modal-account-email');
+            if (modalAvatar) modalAvatar.src = avatarUrl || 'assets/favicon-32x32.png';
+            if (modalName) modalName.textContent = name;
+            if (modalEmail) modalEmail.textContent = email;
+
+            // Auto-fill contact modal inputs if empty
+            const contactNameInput = document.getElementById('popup-form-name');
+            const contactEmailInput = document.getElementById('popup-form-email');
+            if (contactNameInput && !contactNameInput.value) contactNameInput.value = name;
+            if (contactEmailInput && !contactEmailInput.value) contactEmailInput.value = email;
+
+            // Sync with backend PostgreSQL database
+            try {
+                const syncRes = await fetch('/api/auth?action=sync', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Authorization': `Bearer ${session.access_token}`
+                    },
+                    body: JSON.stringify({ access_token: session.access_token })
+                });
+                const syncData = await syncRes.json();
+                if (syncData.success && syncData.profile) {
+                    this.profile = syncData.profile;
+                }
+            } catch (syncErr) {
+                console.warn('Profile sync note:', syncErr.message);
+            }
+
+            if (window.lucide) lucide.createIcons();
+        }
+
+        handleUserSignedOut() {
+            this.session = null;
+            this.profile = null;
+            window.currentUserSession = null;
+
+            // Reset Navbar
+            const navLoginBtn = document.getElementById('auth-login-btn');
+            const navUserBadge = document.getElementById('auth-user-badge');
+            if (navLoginBtn) navLoginBtn.style.display = 'inline-flex';
+            if (navUserBadge) navUserBadge.style.display = 'none';
+
+            // Reset Mobile Drawer
+            const mobLoginBtn = document.getElementById('mobile-auth-login-btn');
+            const mobUserCard = document.getElementById('mobile-auth-user-card');
+            if (mobLoginBtn) mobLoginBtn.style.display = 'flex';
+            if (mobUserCard) mobUserCard.style.display = 'none';
+
+            // Reset Studio OS
+            const osGuestView = document.getElementById('os-auth-guest-view');
+            const osUserView = document.getElementById('os-auth-user-view');
+            if (osGuestView) osGuestView.style.display = 'block';
+            if (osUserView) osUserView.style.display = 'none';
+
+            this.closeAccountModal();
+            if (window.lucide) lucide.createIcons();
+        }
+
+        async signInWithGoogle() {
+            if (!this.client) {
+                alert('Authentication service is currently initializing. Please check server configuration.');
+                return;
+            }
+            triggerHaptic('button');
+            const { error } = await this.client.auth.signInWithOAuth({
+                provider: 'google',
+                options: {
+                    redirectTo: window.location.origin
+                }
+            });
+            if (error) {
+                console.error('Google Sign-In Error:', error.message);
+            }
+        }
+
+        async signOut() {
+            if (!this.client) return;
+            triggerHaptic('button');
+            await this.client.auth.signOut();
+            this.handleUserSignedOut();
+        }
+
+        openAccountModal() {
+            const modal = document.getElementById('account-modal');
+            if (modal) {
+                modal.classList.add('active');
+                modal.setAttribute('aria-hidden', 'false');
+                triggerHaptic('action');
+                if (window.lucide) lucide.createIcons();
+            }
+        }
+
+        closeAccountModal() {
+            const modal = document.getElementById('account-modal');
+            if (modal) {
+                modal.classList.remove('active');
+                modal.setAttribute('aria-hidden', 'true');
+            }
+        }
+
+        setupEventListeners() {
+            // Sign in button triggers
+            const loginTriggers = ['auth-login-btn', 'mobile-auth-login-btn', 'os-google-login-btn'];
+            loginTriggers.forEach(id => {
+                const btn = document.getElementById(id);
+                if (btn) btn.addEventListener('click', (e) => {
+                    e.preventDefault();
+                    this.signInWithGoogle();
+                });
+            });
+
+            // Sign out button triggers
+            const logoutTriggers = ['mobile-auth-logout-btn', 'os-auth-logout-btn', 'account-modal-logout-btn'];
+            logoutTriggers.forEach(id => {
+                const btn = document.getElementById(id);
+                if (btn) btn.addEventListener('click', (e) => {
+                    e.preventDefault();
+                    this.signOut();
+                });
+            });
+
+            // Account modal openers & closers
+            const userBadge = document.getElementById('auth-user-badge');
+            if (userBadge) {
+                userBadge.addEventListener('click', (e) => {
+                    e.preventDefault();
+                    this.openAccountModal();
+                });
+                userBadge.addEventListener('keydown', (e) => {
+                    if (e.key === 'Enter' || e.key === ' ') {
+                        e.preventDefault();
+                        this.openAccountModal();
+                    }
+                });
+            }
+
+            const modalCloseBtn = document.getElementById('account-modal-close-btn');
+            const modalBackdrop = document.getElementById('account-modal-backdrop');
+            const modalSecondaryClose = document.getElementById('account-modal-close-secondary-btn');
+            if (modalCloseBtn) modalCloseBtn.addEventListener('click', () => this.closeAccountModal());
+            if (modalBackdrop) modalBackdrop.addEventListener('click', () => this.closeAccountModal());
+            if (modalSecondaryClose) modalSecondaryClose.addEventListener('click', () => this.closeAccountModal());
+
+            // ESC key closes account modal
+            window.addEventListener('keydown', (e) => {
+                if (e.key === 'Escape') {
+                    const modal = document.getElementById('account-modal');
+                    if (modal && modal.classList.contains('active')) {
+                        this.closeAccountModal();
+                    }
+                }
+            });
+        }
+    }
+
+    const authManager = new PortfolioAuthManager();
+    window.authManager = authManager;
+
+    // 13. Initialize Virtual Computer OS
     if (window.virtualOS) {
         window.virtualOS.init();
     }
 });
+
