@@ -67,18 +67,18 @@ ALTER TABLE public.contact_submissions ENABLE ROW LEVEL SECURITY;
 -- Policies for public.profiles
 -- -------------------------------------------------------------------------
 
--- Policy: Users can view ONLY their own profile
+-- Policy: Users can view ONLY their own profile (cached auth.uid() via subquery)
 CREATE POLICY "Users can view their own profile"
     ON public.profiles
     FOR SELECT
-    USING (auth.uid() = auth_user_id);
+    USING ((select auth.uid()) = auth_user_id);
 
 -- Policy: Users can update ONLY their own profile
 CREATE POLICY "Users can update their own profile"
     ON public.profiles
     FOR UPDATE
-    USING (auth.uid() = auth_user_id)
-    WITH CHECK (auth.uid() = auth_user_id);
+    USING ((select auth.uid()) = auth_user_id)
+    WITH CHECK ((select auth.uid()) = auth_user_id);
 
 -- Policy: Service role has full access (for serverless sync endpoint)
 CREATE POLICY "Service role full access on profiles"
@@ -103,8 +103,8 @@ CREATE POLICY "Users can view their own inquiries"
     ON public.contact_submissions
     FOR SELECT
     USING (
-        auth.uid() IS NOT NULL AND 
-        user_id IN (SELECT id FROM public.profiles WHERE auth_user_id = auth.uid())
+        (select auth.uid()) IS NOT NULL AND 
+        user_id IN (SELECT id FROM public.profiles WHERE auth_user_id = (select auth.uid()))
     );
 
 -- Policy: Service role has full administrative access
@@ -116,18 +116,27 @@ CREATE POLICY "Service role full access on contact_submissions"
     WITH CHECK (true);
 
 -- =========================================================================
--- Function: Auto-update updated_at timestamp
+-- Function: Auto-update updated_at timestamp (Hardened SECURITY INVOKER)
 -- =========================================================================
 CREATE OR REPLACE FUNCTION public.handle_profile_updated_at()
-RETURNS TRIGGER AS $$
+RETURNS TRIGGER 
+LANGUAGE plpgsql
+SECURITY INVOKER
+SET search_path = ''
+AS $$
 BEGIN
     NEW.updated_at = timezone('utc'::text, now());
     RETURN NEW;
 END;
-$$ LANGUAGE plpgsql SECURITY DEFINER;
+$$;
+
+REVOKE EXECUTE ON FUNCTION public.handle_profile_updated_at() FROM PUBLIC;
+REVOKE EXECUTE ON FUNCTION public.handle_profile_updated_at() FROM anon;
+REVOKE EXECUTE ON FUNCTION public.handle_profile_updated_at() FROM authenticated;
 
 DROP TRIGGER IF EXISTS trigger_profile_updated_at ON public.profiles;
 CREATE TRIGGER trigger_profile_updated_at
     BEFORE UPDATE ON public.profiles
     FOR EACH ROW
     EXECUTE FUNCTION public.handle_profile_updated_at();
+
