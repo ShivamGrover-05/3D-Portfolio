@@ -198,9 +198,6 @@
             <a href="mailto:codewithshivamdev@gmail.com" class="social-icon" title="Email">
                 <i data-lucide="mail"></i>
             </a>
-            <button id="toggle-lamp-btn" class="social-icon" title="Toggle Studio Desk Lamp">
-                <i data-lucide="sun"></i>
-            </button>
             <!-- Google Authentication Component -->
             <div id="auth-nav-container" class="auth-nav-container">
                 <button id="auth-login-btn" class="auth-btn-google" aria-label="Sign in with Google" title="Continue with Google">
@@ -265,7 +262,10 @@
                     </button>
                 </div>
             </div>
-            <button class="btn-primary enter-studio-trigger" style="width: 100%; justify-content: center; margin-bottom: 12px;">
+            <a href="#contact-modal" class="btn-primary open-connect-modal-trigger" style="width: 100%; justify-content: center; margin-bottom: 10px; display: flex;">
+                LET'S CONNECT <i data-lucide="arrow-right" style="width: 16px; height: 16px;"></i>
+            </a>
+            <button class="btn-primary enter-studio-trigger" style="width: 100%; justify-content: center; margin-bottom: 14px; background: rgba(0, 243, 255, 0.12); border: 1px solid rgba(0, 243, 255, 0.4); color: var(--accent-cyan);">
                 ENTER STUDIO / OS <i data-lucide="monitor" style="width: 16px; height: 16px;"></i>
             </button>
             <div style="display: flex; justify-content: center; gap: 12px;">
@@ -815,9 +815,6 @@
                         <a href="https://github.com/ShivamGrover-05/aevonix-controller" target="_blank" rel="noopener" id="project-github-btn" class="btn-ghost">
                             <i data-lucide="github" style="width: 16px; height: 16px;"></i> SOURCE CODE
                         </a>
-                        <button id="project-focus-3d-btn" class="btn-ghost" title="Focus 3D Workspace Camera">
-                            <i data-lucide="camera" style="width: 16px; height: 16px;"></i> 3D FOCUS
-                        </button>
                     </div>
                 </div>
 
@@ -1379,56 +1376,77 @@
         </div>
     </div>
 
-    <!-- Dynamic Liquid Glass Music Player Capsule -->
-    <aside id="audio-capsule" class="audio-capsule paused" aria-label="Ambient Music Player">
-        <!-- Sound indicator / Animated waveform bars -->
-        <div class="capsule-waveform" id="capsule-waveform" title="Sound Waveform" aria-hidden="true">
-            <span class="wave-bar bar-1"></span>
-            <span class="wave-bar bar-2"></span>
-            <span class="wave-bar bar-3"></span>
-            <span class="wave-bar bar-4"></span>
-        </div>
-
-        <!-- Track info: tag, title, genre -->
-        <div class="capsule-track-meta">
-            <div class="capsule-sound-label">
-                <span class="sound-dot"></span>
-                <span>SOUND</span>
+    <!-- Dynamic Liquid Glass Music Player: Circular Animated Badge & Expandable Capsule -->
+    <aside id="audio-capsule" class="audio-capsule paused collapsed" aria-label="Ambient Music Player">
+        <!-- Floating Animated Circular Badge (Active when collapsed) -->
+        <button id="audio-capsule-badge" class="capsule-badge-trigger" aria-label="Expand Ambient Music Player" title="Open Music Player">
+            <div class="badge-vinyl-disc" aria-hidden="true"></div>
+            <div class="badge-pulse-glow" aria-hidden="true"></div>
+            <div class="badge-equalizer" aria-hidden="true">
+                <span class="badge-eq-bar b-1"></span>
+                <span class="badge-eq-bar b-2"></span>
+                <span class="badge-eq-bar b-3"></span>
+                <span class="badge-eq-bar b-4"></span>
             </div>
-            <div class="capsule-track-title" id="capsule-track-title">Deep Focus</div>
-            <div class="capsule-track-genre" id="capsule-track-genre">Vintage Lo-Fi Rhodes</div>
-        </div>
-
-        <!-- Progress & Time -->
-        <div class="capsule-timeline">
-            <div class="capsule-progress-track" id="capsule-progress-track" role="progressbar" aria-valuemin="0" aria-valuemax="100" aria-valuenow="0" title="Progress">
-                <div class="capsule-progress-fill" id="capsule-progress-fill"></div>
+            <div class="badge-center-icon" aria-hidden="true">
+                <i data-lucide="music" style="width: 15px; height: 15px;"></i>
             </div>
-            <div class="capsule-time-display">
-                <span id="capsule-current-time">00:00</span>
-                <span class="time-sep">/</span>
-                <span id="capsule-total-time">00:32</span>
-            </div>
-        </div>
+        </button>
 
-        <!-- Controls: Prev, Play/Pause, Next, Volume -->
-        <div class="capsule-controls">
-            <button class="capsule-btn" id="capsule-prev-btn" aria-label="Previous Track" title="Previous Track">
-                <i data-lucide="skip-back" style="width: 14px; height: 14px;"></i>
-            </button>
-            <button class="capsule-btn play-btn" id="capsule-play-btn" aria-label="Play or Pause Ambient Music" title="Play Ambient Music">
-                <i data-lucide="play" id="capsule-play-icon" style="width: 15px; height: 15px;"></i>
-            </button>
-            <button class="capsule-btn" id="capsule-next-btn" aria-label="Next Track" title="Next Track">
-                <i data-lucide="skip-forward" style="width: 14px; height: 14px;"></i>
-            </button>
-            <div class="capsule-volume-wrap" id="capsule-volume-wrap">
-                <button class="capsule-btn vol-btn" id="capsule-vol-btn" aria-label="Volume" title="Volume">
-                    <i data-lucide="volume-2" id="capsule-vol-icon" style="width: 14px; height: 14px;"></i>
-                </button>
-                <div class="capsule-vol-slider-popover" id="capsule-vol-slider-popover">
-                    <input type="range" id="capsule-volume-slider" min="0" max="100" value="30" class="capsule-vol-slider" aria-label="Volume Slider">
+        <!-- Expanded Capsule Player Body (Reveals on click) -->
+        <div class="capsule-expanded-content" id="capsule-expanded-content">
+            <!-- Sound indicator / Animated waveform bars -->
+            <div class="capsule-waveform" id="capsule-waveform" title="Sound Waveform" aria-hidden="true">
+                <span class="wave-bar bar-1"></span>
+                <span class="wave-bar bar-2"></span>
+                <span class="wave-bar bar-3"></span>
+                <span class="wave-bar bar-4"></span>
+            </div>
+
+            <!-- Track info: tag, title, genre -->
+            <div class="capsule-track-meta">
+                <div class="capsule-sound-label">
+                    <span class="sound-dot"></span>
+                    <span>SOUND</span>
                 </div>
+                <div class="capsule-track-title" id="capsule-track-title">Cyber Lounge</div>
+                <div class="capsule-track-genre" id="capsule-track-genre">Ethereal Pad & 9th Chord</div>
+            </div>
+
+            <!-- Progress & Time -->
+            <div class="capsule-timeline">
+                <div class="capsule-progress-track" id="capsule-progress-track" role="progressbar" aria-valuemin="0" aria-valuemax="100" aria-valuenow="0" title="Progress">
+                    <div class="capsule-progress-fill" id="capsule-progress-fill"></div>
+                </div>
+                <div class="capsule-time-display">
+                    <span id="capsule-current-time">00:00</span>
+                    <span class="time-sep">/</span>
+                    <span id="capsule-total-time">00:32</span>
+                </div>
+            </div>
+
+            <!-- Controls: Prev, Play/Pause, Next, Volume, Collapse -->
+            <div class="capsule-controls">
+                <button class="capsule-btn" id="capsule-prev-btn" aria-label="Previous Track" title="Previous Track">
+                    <i data-lucide="skip-back" style="width: 14px; height: 14px;"></i>
+                </button>
+                <button class="capsule-btn play-btn" id="capsule-play-btn" aria-label="Play or Pause Ambient Music" title="Play Ambient Music">
+                    <i data-lucide="play" id="capsule-play-icon" style="width: 15px; height: 15px;"></i>
+                </button>
+                <button class="capsule-btn" id="capsule-next-btn" aria-label="Next Track" title="Next Track">
+                    <i data-lucide="skip-forward" style="width: 14px; height: 14px;"></i>
+                </button>
+                <div class="capsule-volume-wrap" id="capsule-volume-wrap">
+                    <button class="capsule-btn vol-btn" id="capsule-vol-btn" aria-label="Volume" title="Volume">
+                        <i data-lucide="volume-2" id="capsule-vol-icon" style="width: 14px; height: 14px;"></i>
+                    </button>
+                    <div class="capsule-vol-slider-popover" id="capsule-vol-slider-popover">
+                        <input type="range" id="capsule-volume-slider" min="0" max="100" value="30" class="capsule-vol-slider" aria-label="Volume Slider">
+                    </div>
+                </div>
+                <button class="capsule-btn collapse-btn" id="capsule-collapse-btn" aria-label="Minimize Player" title="Minimize Player">
+                    <i data-lucide="chevron-right" style="width: 14px; height: 14px;"></i>
+                </button>
             </div>
         </div>
     </aside>

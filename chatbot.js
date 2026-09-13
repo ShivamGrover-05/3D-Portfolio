@@ -443,9 +443,10 @@
             this.synth.playSend();
             if (window.triggerHaptic) window.triggerHaptic('button');
 
-            // Hide suggestions once user engages
+            // Keep suggestion chips accessible for continuous interactive inquiry
             if (this.dom.suggestionsContainer) {
-                this.dom.suggestionsContainer.style.display = 'none';
+                this.dom.suggestionsContainer.classList.add('compact');
+                this.dom.suggestionsContainer.style.display = 'flex';
             }
 
             this.isGenerating = true;

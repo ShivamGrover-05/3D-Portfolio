@@ -131,7 +131,6 @@ document.addEventListener('DOMContentLoaded', () => {
     const techContainer = document.getElementById('project-tech-container');
     const liveBtn = document.getElementById('project-live-btn');
     const githubBtn = document.getElementById('project-github-btn');
-    const focus3dBtn = document.getElementById('project-focus-3d-btn');
     const infoContainer = document.getElementById('project-info-container');
     const switcherButtons = document.querySelectorAll('.switcher-num-btn');
 
@@ -265,15 +264,7 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     });
 
-    if (focus3dBtn) {
-        focus3dBtn.addEventListener('click', (e) => {
-            e.preventDefault();
-            triggerHaptic('action');
-            if (projects[currentProjectIndex] && window.studioScene) {
-                window.studioScene.focusOnProjectObject(projects[currentProjectIndex]);
-            }
-        });
-    }
+
 
     // Reset 3D View floating button
     const resetDeskBtn = document.getElementById('reset-desk-view-btn');
@@ -398,16 +389,7 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     });
 
-    // 7. Studio Desk Lamp Toggle Trigger
-    const lampBtn = document.getElementById('toggle-lamp-btn');
-    if (lampBtn) {
-        lampBtn.addEventListener('click', () => {
-            triggerHaptic('button');
-            if (window.studioScene && typeof window.studioScene.toggleDeskLamp === 'function') {
-                window.studioScene.toggleDeskLamp();
-            }
-        });
-    }
+
 
     // 8. Intentional Tap vs Scroll Gesture Discrimination Utility
     const attachTouchSafeClick = (element, callback) => {
@@ -738,6 +720,49 @@ document.addEventListener('DOMContentLoaded', () => {
         syncCapsuleMeta(window.lofiAudio.getCurrentTrack());
         updatePlaybackUI(window.lofiAudio.isPlaying);
     }
+
+    // Circular Animated Player Badge & Expandable Capsule Controller
+    const audioCapsuleBadge = document.getElementById('audio-capsule-badge');
+    const capsuleCollapseBtn = document.getElementById('capsule-collapse-btn');
+
+    const expandCapsule = (e) => {
+        if (e) e.stopPropagation();
+        if (!audioCapsule) return;
+        triggerHaptic('button');
+        audioCapsule.classList.remove('collapsed');
+        audioCapsule.classList.add('expanded');
+        if (window.lucide) lucide.createIcons();
+    };
+
+    const collapseCapsule = (e) => {
+        if (e) e.stopPropagation();
+        if (!audioCapsule) return;
+        triggerHaptic('button');
+        audioCapsule.classList.remove('expanded');
+        audioCapsule.classList.add('collapsed');
+        if (capsuleVolPopover) capsuleVolPopover.classList.remove('open');
+    };
+
+    if (audioCapsuleBadge) {
+        attachTouchSafeClick(audioCapsuleBadge, (e) => {
+            expandCapsule(e);
+        });
+    }
+
+    if (capsuleCollapseBtn) {
+        attachTouchSafeClick(capsuleCollapseBtn, (e) => {
+            collapseCapsule(e);
+        });
+    }
+
+    // Clicking anywhere outside the expanded capsule collapses it back to circular badge
+    document.addEventListener('click', (e) => {
+        if (audioCapsule && audioCapsule.classList.contains('expanded')) {
+            if (!audioCapsule.contains(e.target)) {
+                collapseCapsule();
+            }
+        }
+    });
 
     // 10. Contact Form Submissions (Vercel Serverless Function POST /api/contact)
     const inlineContactForm = document.getElementById('inline-contact-form');
@@ -1151,10 +1176,6 @@ document.addEventListener('DOMContentLoaded', () => {
         if (e.key === 'm' || e.key === 'M') {
             togglePlayback();
         }
-
-        if (e.key === 'l' || e.key === 'L') {
-            if (lampBtn) lampBtn.click();
-        }
     });
 
     // 12. Supabase Google Authentication & Identity Subsystem
@@ -1163,49 +1184,90 @@ document.addEventListener('DOMContentLoaded', () => {
             this.client = null;
             this.session = null;
             this.profile = null;
+            this.fallbackUrl = 'https://yajpqgcddzxizarpugyw.supabase.co';
+            this.fallbackAnonKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InlhanBxZ2NkZHp4aXphcnB1Z3l3Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODkyMjIwMDksImV4cCI6MjEwNDc5ODAwOX0.nHAC-KweBkZzPDnNGrSjCWzVxvfJ0kYLGBca0fZxsXs';
+            // Bind click listeners immediately so buttons are never unresponsive
+            this.setupEventListeners();
             this.init();
         }
 
-        async init() {
-            try {
-                // Fetch public Supabase configuration dynamically from server
-                const res = await fetch('/api/auth?action=config');
-                const data = await res.json();
-                if (!data.success || !data.configured || typeof window.supabase === 'undefined') {
-                    return;
-                }
+        ensureClient(supabaseUrl, supabaseAnonKey) {
+            if (this.client) return this.client;
+            if (typeof window.supabase === 'undefined') {
+                console.warn('Supabase JS library not loaded yet.');
+                return null;
+            }
 
-                this.client = window.supabase.createClient(data.supabaseUrl, data.supabaseAnonKey, {
+            const url = supabaseUrl || this.fallbackUrl;
+            const key = supabaseAnonKey || this.fallbackAnonKey;
+
+            try {
+                this.client = window.supabase.createClient(url, key, {
                     auth: {
                         persistSession: true,
                         autoRefreshToken: true,
                         detectSessionInUrl: true
                     }
                 });
-
                 window.supabaseClient = this.client;
+                return this.client;
+            } catch (err) {
+                console.error('Supabase client creation error:', err);
+                return null;
+            }
+        }
 
-                // Handle Auth state change events
-                this.client.auth.onAuthStateChange(async (event, session) => {
-                    this.session = session;
-                    window.currentUserSession = session;
+        async init() {
+            try {
+                // Initialize immediately with default public credentials
+                this.ensureClient();
 
-                    if (session && session.user) {
-                        await this.handleUserSignedIn(session);
-                    } else {
-                        this.handleUserSignedOut();
+                let url = this.fallbackUrl;
+                let key = this.fallbackAnonKey;
+
+                try {
+                    const res = await fetch('/api/auth?action=config');
+                    const data = await res.json();
+                    if (data.success && data.configured && data.supabaseUrl && data.supabaseAnonKey) {
+                        url = data.supabaseUrl;
+                        key = data.supabaseAnonKey;
                     }
-                });
-
-                // Check initial session
-                const { data: sessionData } = await this.client.auth.getSession();
-                if (sessionData && sessionData.session) {
-                    this.session = sessionData.session;
-                    window.currentUserSession = sessionData.session;
-                    await this.handleUserSignedIn(sessionData.session);
+                } catch (fetchErr) {
+                    console.warn('Auth config server fetch note, using public fallbacks:', fetchErr.message);
                 }
 
-                this.setupEventListeners();
+                if (typeof window.supabase !== 'undefined') {
+                    if (!this.client || this.client.supabaseUrl !== url) {
+                        this.client = window.supabase.createClient(url, key, {
+                            auth: {
+                                persistSession: true,
+                                autoRefreshToken: true,
+                                detectSessionInUrl: true
+                            }
+                        });
+                        window.supabaseClient = this.client;
+                    }
+
+                    // Handle Auth state change events
+                    this.client.auth.onAuthStateChange(async (event, session) => {
+                        this.session = session;
+                        window.currentUserSession = session;
+
+                        if (session && session.user) {
+                            await this.handleUserSignedIn(session);
+                        } else {
+                            this.handleUserSignedOut();
+                        }
+                    });
+
+                    // Check initial session
+                    const { data: sessionData } = await this.client.auth.getSession();
+                    if (sessionData && sessionData.session) {
+                        this.session = sessionData.session;
+                        window.currentUserSession = sessionData.session;
+                        await this.handleUserSignedIn(sessionData.session);
+                    }
+                }
             } catch (err) {
                 console.warn('Authentication system initialization note:', err.message);
             }
@@ -1323,7 +1385,10 @@ document.addEventListener('DOMContentLoaded', () => {
 
         async signInWithGoogle() {
             if (!this.client) {
-                alert('Authentication service is currently initializing. Please check server configuration.');
+                this.ensureClient();
+            }
+            if (!this.client) {
+                alert('Authentication service is currently initializing. Please check connection.');
                 return;
             }
             triggerHaptic('button');
@@ -1335,6 +1400,7 @@ document.addEventListener('DOMContentLoaded', () => {
             });
             if (error) {
                 console.error('Google Sign-In Error:', error.message);
+                alert(`Google Sign-In: ${error.message}`);
             }
         }
 

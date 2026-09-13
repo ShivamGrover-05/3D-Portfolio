@@ -86,7 +86,7 @@ Your role is to welcome visitors, answer questions about Shivam's projects, tech
 
 === COMMUNICATION STYLE ===
 - Persona: Futuristic, confident, articulate, tech-savvy, helpful, and concise.
-- Keep answers punchy and easy to scan (use bullet points, short paragraphs, bold text).
+- SPEED & BREVITY FIRST: Keep answers snappy, fast, and punchy. Limit responses to 2-3 brief paragraphs or 3-4 bullet points. Avoid walls of text. Answer directly without preamble.
 - Never fabricate projects, credentials, or personal information outside of this factual summary.`;
 
 // In-memory sliding window rate limiter (25 requests / 60s per client IP)
@@ -185,26 +185,26 @@ export default async function handler(req, res) {
         ];
 
         if (incomingMessages.length > 0) {
-            // Keep last 8 messages for context window & token efficiency
-            const recentMessages = incomingMessages.slice(-8);
+            // Keep last 4 messages for rapid token processing and minimal latency
+            const recentMessages = incomingMessages.slice(-4);
             for (const msg of recentMessages) {
                 if (msg && msg.role && msg.content) {
                     formattedMessages.push({
                         role: msg.role === 'assistant' ? 'assistant' : 'user',
-                        content: String(msg.content).slice(0, 1000)
+                        content: String(msg.content).slice(0, 600)
                     });
                 }
             }
         } else if (body.prompt) {
             formattedMessages.push({
                 role: 'user',
-                content: String(body.prompt).slice(0, 1000)
+                content: String(body.prompt).slice(0, 600)
             });
         }
 
-        // AbortController for timeout protection (15 seconds)
+        // AbortController for timeout protection (25 seconds for resilient cold starts)
         const controller = new AbortController();
-        const timeout = setTimeout(() => controller.abort(), 15000);
+        const timeout = setTimeout(() => controller.abort(), 25000);
 
         const response = await fetch(NVIDIA_API_URL, {
             method: 'POST',
@@ -216,9 +216,9 @@ export default async function handler(req, res) {
             body: JSON.stringify({
                 model: MODEL_NAME,
                 messages: formattedMessages,
-                temperature: 0.7,
-                max_tokens: 1024,
-                top_p: 0.95,
+                temperature: 0.6,
+                max_tokens: 350,
+                top_p: 0.9,
                 chat_template_kwargs: { enable_thinking: false }
             })
         });

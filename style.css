@@ -1641,8 +1641,38 @@ body {
     }
     .navbar { padding: 12px 16px; }
     .brand { font-size: 1.1rem; }
-    .nav-actions .btn-primary { display: none; }
-    .social-icon { width: 36px; height: 36px; }
+    /* Consolidate all actions into hamburger icon on mobile view */
+    .nav-actions .social-icon,
+    .nav-actions .auth-nav-container,
+    .nav-actions .btn-primary,
+    .nav-actions #navbar-connect-btn { 
+        display: none !important; 
+    }
+    .mobile-menu-toggle { 
+        display: flex !important; 
+    }
+
+    /* Mobile Audio Capsule */
+    .audio-capsule.collapsed {
+        bottom: 18px;
+        right: 18px;
+        width: 48px;
+        height: 48px;
+    }
+    .audio-capsule.expanded {
+        bottom: 16px;
+        right: 10px;
+        max-width: calc(100vw - 20px);
+        padding: 6px 10px;
+        gap: 8px;
+    }
+    .audio-capsule.expanded .capsule-track-meta {
+        min-width: 70px;
+        max-width: 90px;
+    }
+    .audio-capsule.expanded .capsule-timeline {
+        width: 60px;
+    }
     
     /* Dedicated Mobile Hero Composition (100dvh with upper-framed 3D holographic sphere) */
     .hero-section {
@@ -2898,8 +2928,8 @@ body.fallback-2d-mode #content-layer {
 }
 
 /* ==================================================
-   DYNAMIC LIQUID GLASS MUSIC PLAYER CAPSULE
-   Compact, Translucent, Floating & High-Performance
+   DYNAMIC LIQUID GLASS MUSIC PLAYER: CIRCULAR BADGE & EXPANDABLE CAPSULE
+   Sleek Circular Floating Orb that expands to Capsule on Click
    ================================================== */
 .audio-capsule {
     position: fixed;
@@ -2909,33 +2939,206 @@ body.fallback-2d-mode #content-layer {
     font-family: var(--font-mono);
     display: inline-flex;
     align-items: center;
-    gap: 14px;
-    background: rgba(8, 12, 22, 0.78);
-    backdrop-filter: blur(18px);
-    -webkit-backdrop-filter: blur(18px);
-    border: 1px solid rgba(0, 243, 255, 0.22);
-    border-radius: 40px;
-    padding: 8px 16px;
-    box-shadow: 0 14px 35px rgba(0, 0, 0, 0.5), inset 0 1px 0 rgba(255, 255, 255, 0.1);
-    transition: all 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+    background: rgba(8, 12, 22, 0.85);
+    backdrop-filter: blur(20px);
+    -webkit-backdrop-filter: blur(20px);
+    border: 1px solid rgba(0, 243, 255, 0.28);
+    box-shadow: 0 14px 35px rgba(0, 0, 0, 0.55), inset 0 1px 0 rgba(255, 255, 255, 0.12);
+    transition: width 0.38s cubic-bezier(0.16, 1, 0.3, 1),
+                height 0.38s cubic-bezier(0.16, 1, 0.3, 1),
+                border-radius 0.38s cubic-bezier(0.16, 1, 0.3, 1),
+                padding 0.38s cubic-bezier(0.16, 1, 0.3, 1),
+                transform 0.25s ease,
+                box-shadow 0.25s ease,
+                border-color 0.25s ease;
     user-select: none;
     touch-action: manipulation;
 }
 
-.audio-capsule:hover {
-    border-color: rgba(0, 243, 255, 0.45);
-    transform: translateY(-2px);
-    box-shadow: 0 18px 40px rgba(0, 0, 0, 0.6), 0 0 20px rgba(0, 243, 255, 0.12), inset 0 1px 0 rgba(255, 255, 255, 0.15);
+/* Collapsed State: Futuristic Animated Circular Disc */
+.audio-capsule.collapsed {
+    width: 52px;
+    height: 52px;
+    border-radius: 50%;
+    padding: 0;
+    cursor: pointer;
+    overflow: visible;
+    justify-content: center;
 }
 
-.audio-capsule.playing {
-    border-color: rgba(0, 243, 255, 0.35);
-    box-shadow: 0 14px 35px rgba(0, 0, 0, 0.5), 0 0 18px rgba(0, 243, 255, 0.16), inset 0 1px 0 rgba(255, 255, 255, 0.12);
+.audio-capsule.collapsed:hover {
+    transform: scale(1.08) translateY(-2px);
+    border-color: rgba(0, 243, 255, 0.6);
+    box-shadow: 0 16px 40px rgba(0, 0, 0, 0.7), 0 0 24px rgba(0, 243, 255, 0.35);
 }
 
-.audio-capsule.paused {
-    border-color: rgba(255, 255, 255, 0.12);
-    box-shadow: 0 12px 30px rgba(0, 0, 0, 0.45), inset 0 1px 0 rgba(255, 255, 255, 0.06);
+.audio-capsule.collapsed.playing {
+    border-color: rgba(0, 255, 157, 0.5);
+    box-shadow: 0 14px 35px rgba(0, 0, 0, 0.6), 0 0 25px rgba(0, 255, 157, 0.28), inset 0 0 12px rgba(0, 243, 255, 0.2);
+}
+
+.audio-capsule.collapsed.paused {
+    border-color: rgba(255, 255, 255, 0.15);
+    box-shadow: 0 12px 30px rgba(0, 0, 0, 0.45);
+}
+
+.capsule-badge-trigger {
+    width: 100%;
+    height: 100%;
+    border-radius: 50%;
+    background: transparent;
+    border: none;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    position: relative;
+    cursor: pointer;
+    padding: 0;
+    color: var(--accent-cyan);
+    overflow: visible;
+}
+
+.badge-vinyl-disc {
+    position: absolute;
+    inset: -3px;
+    border-radius: 50%;
+    border: 2px dashed rgba(0, 243, 255, 0.4);
+    pointer-events: none;
+    transition: all 0.3s ease;
+}
+
+.audio-capsule.playing .badge-vinyl-disc {
+    animation: spinVinyl 6s linear infinite;
+    border-color: rgba(0, 255, 157, 0.65);
+    box-shadow: 0 0 15px rgba(0, 255, 157, 0.3);
+}
+
+@keyframes spinVinyl {
+    from { transform: rotate(0deg); }
+    to { transform: rotate(360deg); }
+}
+
+.badge-pulse-glow {
+    position: absolute;
+    inset: -6px;
+    border-radius: 50%;
+    background: radial-gradient(circle, rgba(0, 243, 255, 0.3) 0%, transparent 70%);
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity 0.3s ease;
+}
+
+.audio-capsule.playing .badge-pulse-glow {
+    opacity: 1;
+    animation: badgeBreath 2.2s infinite ease-in-out;
+}
+
+@keyframes badgeBreath {
+    0%, 100% { transform: scale(1); opacity: 0.35; }
+    50% { transform: scale(1.22); opacity: 0.8; }
+}
+
+.badge-center-icon {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: #fff;
+    transition: transform 0.2s ease, color 0.2s ease;
+    z-index: 2;
+}
+
+.audio-capsule.playing .badge-center-icon {
+    color: var(--accent-green);
+    filter: drop-shadow(0 0 8px rgba(0, 255, 157, 0.7));
+}
+
+.badge-equalizer {
+    display: flex;
+    align-items: flex-end;
+    gap: 2px;
+    height: 10px;
+    position: absolute;
+    bottom: 8px;
+    z-index: 2;
+}
+
+.badge-eq-bar {
+    width: 2px;
+    height: 3px;
+    background: var(--accent-cyan);
+    border-radius: 1px;
+    transition: height 0.15s ease, background 0.2s ease;
+}
+
+.audio-capsule.playing .badge-equalizer .b-1 {
+    animation: badgeWave 0.6s ease-in-out infinite alternate;
+}
+.audio-capsule.playing .badge-equalizer .b-2 {
+    animation: badgeWave 0.9s ease-in-out 0.15s infinite alternate;
+}
+.audio-capsule.playing .badge-equalizer .b-3 {
+    animation: badgeWave 0.5s ease-in-out 0.3s infinite alternate;
+}
+.audio-capsule.playing .badge-equalizer .b-4 {
+    animation: badgeWave 0.8s ease-in-out 0.1s infinite alternate;
+}
+
+@keyframes badgeWave {
+    0% { height: 2px; background: var(--accent-cyan); }
+    100% { height: 9px; background: var(--accent-green); }
+}
+
+.audio-capsule.paused .badge-eq-bar {
+    height: 2px !important;
+    animation: none !important;
+    opacity: 0.5;
+}
+
+/* Hide / Show sub-structures depending on state */
+.audio-capsule.collapsed .capsule-expanded-content {
+    display: none !important;
+}
+
+.audio-capsule.expanded {
+    width: auto;
+    max-width: calc(100vw - 32px);
+    border-radius: 40px;
+    padding: 8px 16px;
+    gap: 14px;
+    cursor: default;
+}
+
+.audio-capsule.expanded .capsule-badge-trigger {
+    display: none !important;
+}
+
+.capsule-expanded-content {
+    display: inline-flex;
+    align-items: center;
+    gap: 14px;
+    animation: capsulePop 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+@keyframes capsulePop {
+    from { opacity: 0; transform: scale(0.92); }
+    to { opacity: 1; transform: scale(1); }
+}
+
+.capsule-btn.collapse-btn {
+    width: 26px;
+    height: 26px;
+    border-radius: 50%;
+    margin-left: 2px;
+    background: rgba(255, 255, 255, 0.05);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    color: var(--text-muted);
+}
+
+.capsule-btn.collapse-btn:hover {
+    background: rgba(0, 243, 255, 0.2);
+    border-color: var(--accent-cyan);
+    color: #fff;
 }
 
 /* Sound indicator / Waveform bars */
@@ -3746,16 +3949,16 @@ body.fallback-2d-mode #content-layer {
     position: fixed;
     bottom: 84px;
     right: 88px;
-    width: 395px;
-    height: 520px;
+    width: 400px;
+    height: 540px;
     max-height: calc(100vh - 105px);
     z-index: 1050;
     border-radius: 20px;
-    background: rgba(9, 13, 25, 0.9);
+    background: rgba(9, 13, 25, 0.92);
     backdrop-filter: blur(28px) saturate(200%);
     -webkit-backdrop-filter: blur(28px) saturate(200%);
-    border: 1px solid rgba(0, 243, 255, 0.32);
-    box-shadow: 0 25px 65px rgba(0, 0, 0, 0.8), 0 0 40px rgba(0, 243, 255, 0.15), inset 0 1px 0 rgba(255, 255, 255, 0.15);
+    border: 1px solid rgba(0, 243, 255, 0.38);
+    box-shadow: 0 25px 65px rgba(0, 0, 0, 0.85), 0 0 45px rgba(0, 243, 255, 0.18), inset 0 1px 0 rgba(255, 255, 255, 0.16);
     display: flex;
     flex-direction: column;
     overflow: hidden;
@@ -3764,6 +3967,24 @@ body.fallback-2d-mode #content-layer {
     transform: translateY(20px) scale(0.96);
     transform-origin: bottom right;
     transition: all 0.35s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.chatbot-window::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: repeating-linear-gradient(
+        0deg,
+        rgba(0, 243, 255, 0.015) 0px,
+        rgba(0, 243, 255, 0.015) 1px,
+        transparent 1px,
+        transparent 3px
+    );
+    pointer-events: none;
+    z-index: 1;
 }
 
 .chatbot-window.open {
